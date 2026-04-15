@@ -1112,6 +1112,29 @@ fun ModernHome(
             }
         }
 
+        // Featured Research Module
+        Text(
+            if (lang == Lang.EN) "CORE SIMULATION PREVIEW" else "कोर सिमुलेशन पूर्वावलोकन",
+            color = accent,
+            fontSize = 12.sp,
+            fontWeight = FontWeight.Bold,
+            letterSpacing = 2.sp,
+            modifier = Modifier.align(Alignment.Start)
+        )
+        Spacer(Modifier.height(16.dp))
+        
+        Surface(
+            modifier = Modifier.fillMaxWidth().height(180.dp),
+            shape = RoundedCornerShape(24.dp),
+            color = CardBg,
+            border = BorderStroke(1.dp, GhostWhite.copy(alpha = 0.05f))
+        ) {
+            Box(Modifier.padding(16.dp), contentAlignment = Alignment.Center) {
+                // Showing Kinematics as featured
+                KinematicsInteraction(accent)
+            }
+        }
+
         Spacer(Modifier.height(32.dp))
         
         // Quick Actions
