@@ -1,13 +1,13 @@
 package com.example.inscit.xp
 
 enum class Rank(val label: String, val icon: String, val threshold: Int) {
-    BEGINNER("Beginner", "🌱", 0),
-    EXPLORER("Explorer", "🚀", 150),
-    SCIENTIST("Scientist", "🧪", 300),
-    GENIUS("Genius", "🧠", 600),
-    MASTER("Master","♟️", 1000),
-    HERO("Hero", "🦸🏼‍♂️", 1500),
-    LEGEND("Legend", "👑", 2000);
+    BEGINNER(label = "Beginner", icon = "🌱", threshold = 0),
+    EXPLORER(label = "Explorer", icon = "🚀", threshold = 150),
+    SCIENTIST(label = "Scientist", icon = "🧪", threshold = 300),
+    GENIUS(label = "Genius", icon = "🧠", threshold = 600),
+    MASTER(label = "Master",icon = "♟️", threshold = 1000),
+    HERO(label = "Hero", icon = "🦸🏼‍♂️", threshold = 1500),
+    LEGEND(label = "Legend", icon = "👑", threshold = 2000);
 
     companion object {
         fun fromXp(xp: Int): Rank {

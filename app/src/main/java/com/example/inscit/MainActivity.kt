@@ -1,7 +1,9 @@
 package com.example.inscit
 
-import androidx.compose.runtime.saveable.rememberSaveable
 import android.content.Context
+import android.content.Intent
+import android.net.Uri
+import androidx.core.content.FileProvider
 import android.os.Build
 import android.os.Bundle
 import android.os.VibrationEffect
@@ -10,49 +12,113 @@ import android.os.VibratorManager
 import android.speech.tts.TextToSpeech
 import android.widget.Toast
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.*
-import androidx.compose.animation.core.*
-import androidx.compose.foundation.*
-import androidx.compose.foundation.layout.*
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
-import com.example.inscit.xp.Rank
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.Saver
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameMillis
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.*
-import androidx.compose.ui.graphics.*
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.inscit.models.Lang
+import com.example.inscit.models.QuizProgress
+import com.example.inscit.models.ThemeMode
+import com.example.inscit.models.TopicDetail
+import com.example.inscit.models.UserDocument
+import com.example.inscit.models.UserNote
+import com.example.inscit.models.UserProfile
+import com.example.inscit.models.UserSettings
+import com.example.inscit.models.UserStats
+import com.example.inscit.syllabus.Syllabus
+import com.example.inscit.ui.AtomIcon
+import com.example.inscit.ui.BackIcon
+import com.example.inscit.ui.DNAIcon
+import com.example.inscit.ui.DrawingIcon
+import com.example.inscit.ui.ExportIcon
+import com.example.inscit.ui.FlaskIcon
+import com.example.inscit.ui.NoteIcon
+import com.example.inscit.ui.ProfileImage
+import com.example.inscit.ui.SaveIcon
+import com.example.inscit.ui.ScienceQuizScreen
+import com.example.inscit.ui.ShareIcon
+import com.example.inscit.ui.SpeakerIcon
+import com.example.inscit.ui.StarIcon
+import com.example.inscit.ui.TopicDetailScreen
+import com.example.inscit.ui.TopicSelectionScreen
+import com.example.inscit.xp.Rank
+import androidx.compose.runtime.MutableState
 import java.io.File
 import java.io.FileOutputStream
 import java.util.Locale
-import android.net.Uri
-import androidx.compose.runtime.saveable.Saver
-import androidx.compose.ui.graphics.luminance
-import androidx.compose.foundation.gestures.detectDragGestures
-import androidx.compose.ui.input.pointer.pointerInput
-import android.content.Intent
-import androidx.compose.material3.TextField
-import androidx.compose.material3.TextFieldDefaults
-import com.example.inscit.models.*
-import com.example.inscit.syllabus.*
-import com.example.inscit.ui.*
-import com.example.inscit.xp.*
 
-enum class Screen { SPLASH, HOME, LAB, QUIZ, NOTES, THEME_CONFIG, NOTES_FOLDER, PROFILE, TOPIC_SELECTION, TOPIC_DETAIL }
+enum class Screen { SPLASH, HOME, LAB, QUIZ, NOTES, THEME_CONFIG, NOTES_FOLDER, PROFILE, TOPIC_SELECTION, TOPIC_DETAIL, EXPORTS_LIST, EXPORT_DETAIL }
 enum class Branch { PHYSICS, CHEMISTRY, BIOLOGY }
 
 val DeepSpace = Color(0xFF020408)
@@ -68,7 +134,6 @@ val NobleLightAccent = Color(0xFF2C3E50)
 val NobleDarkAccent = Color(0xFFE0E0E0)
 val CardBg = Color(0xFF1A1C1E)
 
-// Helper to trigger haptic feedback
 fun triggerVibration(context: Context, type: String) {
     val vibrator = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
         val manager = context.getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as VibratorManager
@@ -180,6 +245,12 @@ class TTSManager(context: Context) : TextToSpeech.OnInitListener {
     }
 }
 
+fun getExportFolder(context: Context): File {
+    val folder = File(context.getExternalFilesDir(null), "InscitExports")
+    if (!folder.exists()) folder.mkdirs()
+    return folder
+}
+
 fun saveToTextFile(context: Context, userDoc: UserDocument) {
     val data = """
         INSCIT EXPLORER PROFILE
@@ -199,8 +270,9 @@ fun saveToTextFile(context: Context, userDoc: UserDocument) {
     """.trimIndent()
     
     try {
+        val folder = getExportFolder(context)
         val fileName = "inscit_profile_${System.currentTimeMillis()}.txt"
-        val file = File(context.getExternalFilesDir(null), fileName)
+        val file = File(folder, fileName)
         file.writeText(data)
         Toast.makeText(context, "Progress Saved to: ${file.absolutePath}", Toast.LENGTH_LONG).show()
     } catch (e: Exception) {
@@ -285,6 +357,7 @@ fun AppEngine(tts: TTSManager) {
     var currentScreen by rememberSaveable { mutableStateOf(Screen.SPLASH) }
     var selectedBranch by rememberSaveable { mutableStateOf(Branch.PHYSICS) }
     var selectedTopic by remember { mutableStateOf<TopicDetail?>(null) }
+    var selectedExportFile by remember { mutableStateOf<File?>(null) }
     
     // Derived state from userDocument
     val language = userDocument.settings.language
@@ -293,6 +366,31 @@ fun AppEngine(tts: TTSManager) {
     // Immediate persistence to SharedPreferences
     LaunchedEffect(userDocument) {
         saveUserDocument(context, userDocument)
+    }
+
+    BackHandler(enabled = currentScreen != Screen.HOME && currentScreen != Screen.SPLASH) {
+        when (currentScreen) {
+            Screen.TOPIC_SELECTION -> currentScreen = Screen.HOME
+            Screen.TOPIC_DETAIL -> currentScreen = Screen.TOPIC_SELECTION
+            Screen.THEME_CONFIG -> currentScreen = Screen.HOME
+            Screen.NOTES_FOLDER -> currentScreen = Screen.THEME_CONFIG
+            Screen.LAB -> {
+                tts.stop()
+                currentScreen = Screen.HOME
+            }
+            Screen.NOTES -> {
+                tts.stop()
+                currentScreen = Screen.LAB
+            }
+            Screen.QUIZ -> {
+                tts.stop()
+                currentScreen = Screen.HOME
+            }
+            Screen.PROFILE -> currentScreen = Screen.HOME
+            Screen.EXPORTS_LIST -> currentScreen = Screen.PROFILE
+            Screen.EXPORT_DETAIL -> currentScreen = Screen.EXPORTS_LIST
+            else -> {}
+        }
     }
 
     val appBg = when {
@@ -469,8 +567,34 @@ fun AppEngine(tts: TTSManager) {
                             onSaveProgress = {
                                 saveToTextFile(context, userDocument)
                             },
+                            onViewExports = {
+                                currentScreen = Screen.EXPORTS_LIST
+                            },
                             onBack = { currentScreen = Screen.HOME }
                         )
+                    }
+                    Screen.EXPORTS_LIST -> {
+                        ExportListScreen(
+                            accent = primaryAccent,
+                            txtCol = textColor,
+                            lang = language,
+                            onBack = { currentScreen = Screen.PROFILE },
+                            onFileClick = { file ->
+                                selectedExportFile = file
+                                currentScreen = Screen.EXPORT_DETAIL
+                            }
+                        )
+                    }
+                    Screen.EXPORT_DETAIL -> {
+                        selectedExportFile?.let { file ->
+                            ExportDetailScreen(
+                                file = file,
+                                accent = primaryAccent,
+                                txtCol = textColor,
+                                lang = language,
+                                onBack = { currentScreen = Screen.EXPORTS_LIST }
+                            )
+                        }
                     }
 
                 }
@@ -878,8 +1002,8 @@ fun LocalProfileView(
     userDoc: UserDocument,
     accent: Color,
     onUpdateProfile: (UserDocument) -> Unit,
-
     onSaveProgress: () -> Unit,
+    onViewExports: () -> Unit,
     onBack: () -> Unit
 ) {
     val context = LocalContext.current
@@ -964,7 +1088,7 @@ fun LocalProfileView(
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
             StatItem(label = if (lang == Lang.EN) "LEVEL" else "लेवल", value = userDoc.stats.level.toString(), accent)
             StatItem(label = if (lang == Lang.EN) "TOTAL XP" else "कुल XP", value = userDoc.stats.xp.toString(), accent)
-            StatItem(label = if (lang == Lang.EN) "MODULES" else "मॉड्यूल", value = userDoc.stats.quizzesTaken.toString(), accent)
+            StatItem(label = if (lang == Lang.EN) "QUIZES TAKEN" else " दिए गए क्विज़", value = userDoc.stats.quizzesTaken.toString(), accent)
         }
 
         Spacer(Modifier.height(48.dp))
@@ -976,6 +1100,18 @@ fun LocalProfileView(
             colors = ButtonDefaults.buttonColors(containerColor = accent, contentColor = DeepSpace)
         ) {
             Text(if (lang == Lang.EN) "EXPORT CORE DATA" else "कोर डेटा एक्सपोर्ट करें", fontWeight = FontWeight.ExtraBold, letterSpacing = 1.sp)
+        }
+
+        Spacer(Modifier.height(16.dp))
+
+        Button(
+            onClick = onViewExports,
+            modifier = Modifier.fillMaxWidth().height(60.dp),
+            shape = RoundedCornerShape(16.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = GhostWhite.copy(alpha = 0.05f), contentColor = GhostWhite),
+            border = BorderStroke(1.dp, GhostWhite.copy(alpha = 0.2f))
+        ) {
+            Text(if (lang == Lang.EN) "VIEW EXPORTS" else "एक्सपोर्ट्स देखें", fontWeight = FontWeight.ExtraBold, letterSpacing = 1.sp)
         }
 
         Spacer(Modifier.height(24.dp))
@@ -1578,6 +1714,132 @@ fun DrawingCanvas(
                 currentPath.drop(1).forEach { lineTo(it.x, it.y) }
             }
             drawPath(p, color, style = Stroke(width = 4f, cap = StrokeCap.Round))
+        }
+    }
+}
+
+@Composable
+fun ExportListScreen(
+    accent: Color,
+    txtCol: Color,
+    lang: Lang,
+    onBack: () -> Unit,
+    onFileClick: (File) -> Unit
+) {
+    val context = LocalContext.current
+    val exportFolder = remember { getExportFolder(context) }
+    var files by remember { mutableStateOf(exportFolder.listFiles()?.filter { it.isFile }?.sortedByDescending { it.lastModified() } ?: emptyList()) }
+
+    Column(
+        modifier = Modifier.fillMaxSize().padding(24.dp)
+    ) {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            IconButton(onClick = onBack) { BackIcon(color = txtCol) }
+            Text(if (lang == Lang.EN) "EXPORTED DATA" else "एक्सपोर्ट किया गया डेटा", fontSize = 20.sp, fontWeight = FontWeight.Black, color = txtCol, letterSpacing = 2.sp)
+        }
+
+        Spacer(Modifier.height(32.dp))
+
+        if (files.isEmpty()) {
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Text(if (lang == Lang.EN) "No exports found." else "कोई एक्सपोर्ट नहीं मिला।", color = txtCol.copy(alpha = 0.5f))
+            }
+        } else {
+            LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                items(files) { file ->
+                    Surface(
+                        onClick = { onFileClick(file) },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(16.dp),
+                        color = CardBg,
+                        border = BorderStroke(1.dp, GhostWhite.copy(alpha = 0.05f))
+                    ) {
+                        Row(Modifier.padding(20.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Box(Modifier.size(40.dp).clip(CircleShape).background(accent.copy(alpha = 0.1f)), contentAlignment = Alignment.Center) {
+                                NoteIcon(accent)
+                            }
+                            Spacer(Modifier.width(16.dp))
+                            Column(Modifier.weight(1f)) {
+                                Text(file.name, color = GhostWhite, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                                Text(
+                                    java.text.SimpleDateFormat("dd MMM yyyy, HH:mm").format(java.util.Date(file.lastModified())),
+                                    color = accent.copy(alpha = 0.6f),
+                                    fontSize = 10.sp
+                                )
+                            }
+                            IconButton(onClick = {
+                                file.delete()
+                                files = exportFolder.listFiles()?.filter { it.isFile }?.sortedByDescending { it.lastModified() } ?: emptyList()
+                            }) {
+                                Text("×", color = PowerRed, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun ExportDetailScreen(
+    file: File,
+    accent: Color,
+    txtCol: Color,
+    lang: Lang,
+    onBack: () -> Unit
+) {
+    val context = LocalContext.current
+    val content = remember(file) { try { file.readText() } catch (e: Exception) { "Error reading file" } }
+
+    Column(
+        modifier = Modifier.fillMaxSize().padding(24.dp)
+    ) {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            IconButton(onClick = onBack) { BackIcon(color = txtCol) }
+            Text(file.name, fontSize = 16.sp, fontWeight = FontWeight.Black, color = txtCol, modifier = Modifier.weight(1f))
+            IconButton(onClick = {
+                val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
+                val shareIntent = Intent().apply {
+                    action = Intent.ACTION_SEND
+                    putExtra(Intent.EXTRA_STREAM, uri)
+                    type = "text/plain"
+                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                }
+                context.startActivity(Intent.createChooser(shareIntent, "Share Export"))
+            }) { ShareIcon(accent) }
+        }
+
+        Spacer(Modifier.height(24.dp))
+
+        Surface(
+            modifier = Modifier.fillMaxWidth().weight(1f),
+            shape = RoundedCornerShape(24.dp),
+            color = CardBg,
+            border = BorderStroke(1.dp, GhostWhite.copy(alpha = 0.05f))
+        ) {
+            Column(Modifier.padding(24.dp).verticalScroll(rememberScrollState())) {
+                Text(content, color = GhostWhite.copy(alpha = 0.8f), fontSize = 14.sp, lineHeight = 22.sp, fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace)
+            }
+        }
+        
+        Spacer(Modifier.height(24.dp))
+        
+        Button(
+            onClick = {
+                val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
+                val intent = Intent(Intent.ACTION_SEND).apply {
+                    type = "text/plain"
+                    putExtra(Intent.EXTRA_STREAM, uri)
+                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                }
+                context.startActivity(Intent.createChooser(intent, "Export Data"))
+            },
+            modifier = Modifier.fillMaxWidth().height(60.dp),
+            shape = RoundedCornerShape(16.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = accent, contentColor = DeepSpace)
+        ) {
+            Text(if (lang == Lang.EN) "SHARE / EXPORT" else "शेयर / एक्सपोर्ट", fontWeight = FontWeight.ExtraBold)
         }
     }
 }

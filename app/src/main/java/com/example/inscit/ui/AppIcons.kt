@@ -37,17 +37,17 @@ fun HomeIcon(color: Color = Color.White, modifier: Modifier = Modifier.size(24.d
 @Composable
 fun SettingsIcon(color: Color = Color.White, modifier: Modifier = Modifier.size(24.dp)) {
     Canvas(modifier = modifier) {
-        val center = Offset(size.width / 2, size.height / 2)
+        val center = Offset(x = size.width / 2, y = size.height / 2)
         drawCircle(color, radius = size.width * 0.2f, center = center)
         repeat(8) { i ->
             val angle = (i * 45f) * (Math.PI / 180f).toFloat()
             val start = Offset(
-                center.x + (size.width * 0.25f) * Math.cos(angle.toDouble()).toFloat(),
-                center.y + (size.width * 0.25f) * Math.sin(angle.toDouble()).toFloat()
+                x = center.x + (size.width * 0.25f) * Math.cos(angle.toDouble()).toFloat(),
+                y = center.y + (size.width * 0.25f) * Math.sin(angle.toDouble()).toFloat()
             )
             val end = Offset(
-                center.x + (size.width * 0.45f) * Math.cos(angle.toDouble()).toFloat(),
-                center.y + (size.width * 0.45f) * Math.sin(angle.toDouble()).toFloat()
+                x = center.x + (size.width * 0.45f) * Math.cos(angle.toDouble()).toFloat(),
+                y = center.y + (size.width * 0.45f) * Math.sin(angle.toDouble()).toFloat()
             )
             drawLine(color, start, end, strokeWidth = 6f, cap = StrokeCap.Round)
         }
