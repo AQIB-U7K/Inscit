@@ -276,7 +276,7 @@ fun saveToTextFile(context: Context, userDoc: UserDocument) {
         file.writeText(data)
         Toast.makeText(context, "Progress Saved to: ${file.absolutePath}", Toast.LENGTH_LONG).show()
     } catch (e: Exception) {
-        Toast.makeText(context, "Failed to save: ${e.message}", Toast.LENGTH_SHORT).show()
+        Toast.makeText(context, "save processing failed: ${e.message}", Toast.LENGTH_SHORT).show()
     }
 }
 
