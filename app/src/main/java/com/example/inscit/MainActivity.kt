@@ -1248,45 +1248,6 @@ fun ModernHome(
             }
         }
 
-        // Featured Research Module
-        Text(
-            if (lang == Lang.EN) "PLATFORM OVERVIEW" else "प्लेटफ़ॉर्म अवलोकन",
-            color = accent,
-            fontSize = 12.sp,
-            fontWeight = FontWeight.Bold,
-            letterSpacing = 2.sp,
-            modifier = Modifier.align(Alignment.Start)
-        )
-        Spacer(Modifier.height(16.dp))
-        
-        Surface(
-            modifier = Modifier.fillMaxWidth().height(160.dp),
-            shape = RoundedCornerShape(24.dp),
-            color = CardBg,
-            border = BorderStroke(1.dp, GhostWhite.copy(alpha = 0.05f))
-        ) {
-            Box(Modifier.padding(24.dp), contentAlignment = Alignment.Center) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(
-                        if (lang == Lang.EN) "Welcome to the Inscit Omega Core." else "Inscit ओमेगा कोर में आपका स्वागत है।",
-                        color = GhostWhite,
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Medium,
-                        textAlign = TextAlign.Center
-                    )
-                    Spacer(Modifier.height(8.dp))
-                    Text(
-                        if (lang == Lang.EN) "Select a branch below to begin your scientific journey with interactive simulations and detailed modules." 
-                        else "इंटरैक्टिव सिमुलेशन और विस्तृत मॉड्यूल के साथ अपनी वैज्ञानिक यात्रा शुरू करने के लिए नीचे एक शाखा चुनें।",
-                        color = GhostWhite.copy(alpha = 0.5f),
-                        fontSize = 12.sp,
-                        textAlign = TextAlign.Center,
-                        lineHeight = 18.sp
-                    )
-                }
-            }
-        }
-
         Spacer(Modifier.height(32.dp))
         
         // Quick Actions

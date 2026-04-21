@@ -40,15 +40,17 @@ fun ScienceResultScreen(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         item {
+            Spacer(Modifier.height(16.dp))
             Text(
                 text = if (lang == Lang.EN) "LAB REPORT" else "लैब रिपोर्ट",
                 style = MaterialTheme.typography.labelMedium,
                 color = accent,
-                letterSpacing = 2.sp
+                letterSpacing = 2.sp,
+                fontWeight = FontWeight.Black
             )
             Text(
                 text = "${analytics.overallScore}%",
-                fontSize = 72.sp,
+                fontSize = 80.sp,
                 fontWeight = FontWeight.Black,
                 color = GhostWhite
             )
@@ -58,7 +60,7 @@ fun ScienceResultScreen(
                 color = accent,
                 fontWeight = FontWeight.Bold
             )
-            Spacer(Modifier.height(32.dp))
+            Spacer(Modifier.height(48.dp))
         }
 
         item {
@@ -66,10 +68,10 @@ fun ScienceResultScreen(
                 data = analytics.radarData,
                 accent = accent,
                 modifier = Modifier
-                    .size(280.dp)
+                    .size(300.dp)
                     .padding(16.dp)
             )
-            Spacer(Modifier.height(32.dp))
+            Spacer(Modifier.height(48.dp))
         }
 
         item {
@@ -79,25 +81,26 @@ fun ScienceResultScreen(
                 accent = accent,
                 isPositive = true
             )
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(24.dp))
             ResultTraitsSection(
                 title = if (lang == Lang.EN) "WEAKNESSES" else "कमजोरियां",
                 traits = if (lang == Lang.EN) analytics.weaknessesEn else analytics.weaknessesHi,
                 accent = PowerRed,
                 isPositive = false
             )
-            Spacer(Modifier.height(32.dp))
+            Spacer(Modifier.height(48.dp))
         }
 
         item {
             Text(
                 text = if (lang == Lang.EN) "SCIENTIFIC EXPLANATIONS" else "वैज्ञानिक व्याख्या",
-                modifier = Modifier.fillMaxWidth(),
-                style = MaterialTheme.typography.titleLarge,
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp),
+                fontSize = 18.sp,
                 color = accent,
-                fontWeight = FontWeight.Black
+                fontWeight = FontWeight.Black,
+                letterSpacing = 1.sp
             )
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(20.dp))
         }
 
         items(analytics.explanations) { (question, explanation) ->
@@ -105,30 +108,30 @@ fun ScienceResultScreen(
         }
 
         item {
-            Spacer(Modifier.height(32.dp))
+            Spacer(Modifier.height(40.dp))
             Button(
                 onClick = onRetry,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(56.dp),
+                    .height(60.dp),
                 shape = RoundedCornerShape(16.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = accent, contentColor = Color.Black)
             ) {
-                Text(if (lang == Lang.EN) "RETRY QUIZ" else "पुनः प्रयास करें", fontWeight = FontWeight.Black)
+                Text(if (lang == Lang.EN) "RETRY QUIZ" else "पुनः प्रयास करें", fontWeight = FontWeight.Black, fontSize = 16.sp)
             }
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(16.dp))
             OutlinedButton(
                 onClick = onFinish,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(56.dp),
+                    .height(60.dp),
                 shape = RoundedCornerShape(16.dp),
-                border = BorderStroke(1.dp, accent),
+                border = BorderStroke(1.5.dp, accent),
                 colors = ButtonDefaults.outlinedButtonColors(contentColor = accent)
             ) {
-                Text(if (lang == Lang.EN) "BACK TO HUB" else "हब पर वापस जाएं", fontWeight = FontWeight.Bold)
+                Text(if (lang == Lang.EN) "BACK TO HUB" else "हब पर वापस जाएं", fontWeight = FontWeight.Bold, fontSize = 16.sp)
             }
-            Spacer(Modifier.height(40.dp))
+            Spacer(Modifier.height(48.dp))
         }
     }
 }

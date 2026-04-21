@@ -33,43 +33,44 @@ fun InteractionContainer(
     accent: Color,
     legend: List<Pair<String, Color>>,
     liveIndexes: List<Pair<String, String>>,
+    controls: @Composable ColumnScope.() -> Unit = {},
     content: @Composable BoxScope.() -> Unit
 ) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .background(CardBg, RoundedCornerShape(24.dp))
-            .border(1.dp, GhostWhite.copy(alpha = 0.05f), RoundedCornerShape(24.dp))
-            .padding(16.dp)
+            .background(CardBg, RoundedCornerShape(28.dp))
+            .border(1.dp, GhostWhite.copy(alpha = 0.05f), RoundedCornerShape(28.dp))
+            .padding(20.dp)
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
                 title.uppercase(),
                 color = GhostWhite,
-                fontSize = 14.sp,
+                fontSize = 13.sp,
                 fontWeight = FontWeight.Black,
                 letterSpacing = 1.sp
             )
             Box(
                 modifier = Modifier
-                    .size(8.dp)
+                    .size(10.dp)
                     .background(accent, CircleShape)
                     .padding(2.dp)
             )
         }
         
-        Spacer(Modifier.height(16.dp))
+        Spacer(Modifier.height(20.dp))
         
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(240.dp)
-                .clip(RoundedCornerShape(16.dp))
-                .background(Color.Black.copy(alpha = 0.3f))
+                .height(260.dp)
+                .clip(RoundedCornerShape(20.dp))
+                .background(Color.Black.copy(alpha = 0.4f))
         ) {
             content()
             
@@ -77,15 +78,16 @@ fun InteractionContainer(
             Column(
                 modifier = Modifier
                     .align(Alignment.BottomStart)
-                    .padding(12.dp)
-                    .background(DeepSpace.copy(alpha = 0.7f), RoundedCornerShape(8.dp))
-                    .padding(8.dp)
+                    .padding(16.dp)
+                    .background(DeepSpace.copy(alpha = 0.8f), RoundedCornerShape(12.dp))
+                    .border(0.5.dp, GhostWhite.copy(alpha = 0.1f), RoundedCornerShape(12.dp))
+                    .padding(10.dp)
             ) {
                 legend.forEach { (label, color) ->
-                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 2.dp)) {
-                        Box(Modifier.size(6.dp).background(color, CircleShape))
-                        Spacer(Modifier.width(6.dp))
-                        Text(label, fontSize = 8.sp, color = GhostWhite.copy(alpha = 0.7f), fontWeight = FontWeight.Bold)
+                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 3.dp)) {
+                        Box(Modifier.size(8.dp).background(color, CircleShape))
+                        Spacer(Modifier.width(8.dp))
+                        Text(label, fontSize = 9.sp, color = GhostWhite.copy(alpha = 0.8f), fontWeight = FontWeight.Bold)
                     }
                 }
             }
@@ -94,19 +96,32 @@ fun InteractionContainer(
             Column(
                 modifier = Modifier
                     .align(Alignment.TopEnd)
-                    .padding(12.dp)
-                    .background(accent.copy(alpha = 0.1f), RoundedCornerShape(8.dp))
-                    .border(1.dp, accent.copy(alpha = 0.2f), RoundedCornerShape(8.dp))
-                    .padding(horizontal = 8.dp, vertical = 4.dp)
+                    .padding(16.dp)
+                    .background(accent.copy(alpha = 0.15f), RoundedCornerShape(12.dp))
+                    .border(1.dp, accent.copy(alpha = 0.3f), RoundedCornerShape(12.dp))
+                    .padding(horizontal = 10.dp, vertical = 6.dp)
             ) {
                 liveIndexes.forEach { (key, value) ->
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(key, fontSize = 9.sp, color = accent, fontWeight = FontWeight.Black)
-                        Spacer(Modifier.width(4.dp))
-                        Text(value, fontSize = 10.sp, color = GhostWhite, fontWeight = FontWeight.Bold)
+                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 1.dp)) {
+                        Text(key, fontSize = 10.sp, color = accent, fontWeight = FontWeight.Black)
+                        Spacer(Modifier.width(6.dp))
+                        Text(value, fontSize = 11.sp, color = GhostWhite, fontWeight = FontWeight.Bold)
                     }
                 }
             }
+        }
+
+        // Dedicated Controls Section
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 20.dp)
+                .background(accent.copy(alpha = 0.03f), RoundedCornerShape(16.dp))
+                .padding(12.dp),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            controls()
         }
     }
 }
@@ -178,7 +193,15 @@ fun ElectromagnetismInteraction(accent: Color) {
             "Current (I):" to "${"%.1f".format(current)} A",
             "B-Field:" to "${"%.2f".format(current * 0.5f)} T",
             "Dir:" to "Right-Hand Rule"
-        )
+        ),
+        controls = {
+            Text("Adjust Current Intensity", color = GhostWhite.copy(alpha = 0.6f), fontSize = 10.sp, fontWeight = FontWeight.Bold)
+            Slider(
+                value = current, onValueChange = { current = it }, valueRange = 0f..5f,
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                colors = SliderDefaults.colors(thumbColor = accent, activeTrackColor = accent)
+            )
+        }
     ) {
         Canvas(Modifier.fillMaxSize()) {
             val center = Offset(size.width / 2f, size.height / 2f)
@@ -205,11 +228,6 @@ fun ElectromagnetismInteraction(accent: Color) {
                 drawCircle(accent, radius = 4f, center = Offset(ax, ay))
             }
         }
-        
-        Slider(
-            value = current, onValueChange = { current = it }, valueRange = 0f..5f,
-            modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp).width(150.dp)
-        )
     }
 }
 
@@ -226,7 +244,17 @@ fun NuclearPhysicsInteraction(accent: Color) {
             "Process:" to if(isFission) "Fission" else "Stable",
             "Energy:" to if(isFission) "200 MeV" else "0",
             "Byproducts:" to if(isFission) "Ba + Kr" else "None"
-        )
+        ),
+        controls = {
+            Button(
+                onClick = { isFission = !isFission },
+                modifier = Modifier.fillMaxWidth().height(44.dp),
+                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = if(isFission) PowerRed else accent)
+            ) {
+                Text(if(isFission) "RESET REACTION" else "TRIGGER FISSION", fontSize = 12.sp, fontWeight = FontWeight.Black)
+            }
+        }
     ) {
         Canvas(Modifier.fillMaxSize()) {
             val center = Offset(size.width / 2f, size.height / 2f)
@@ -255,14 +283,6 @@ fun NuclearPhysicsInteraction(accent: Color) {
                 }
             }
         }
-        
-        Button(
-            onClick = { isFission = !isFission },
-            modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = if(isFission) PowerRed else accent)
-        ) {
-            Text(if(isFission) "RESET" else "TRIGGER FISSION", fontSize = 10.sp)
-        }
     }
 }
 
@@ -278,7 +298,15 @@ fun PeriodicTrendsInteraction(accent: Color) {
             "Z-Eff:" to "${"%.1f".format(atomicNumber * 0.3f)}",
             "Radius:" to "${(200 / atomicNumber).toInt()} pm",
             "Electroneg:" to "${"%.1f".format(atomicNumber * 0.4f)}"
-        )
+        ),
+        controls = {
+            Text("Atomic Number (Z)", color = GhostWhite.copy(alpha = 0.6f), fontSize = 10.sp, fontWeight = FontWeight.Bold)
+            Slider(
+                value = atomicNumber, onValueChange = { atomicNumber = it }, valueRange = 1f..20f,
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                colors = SliderDefaults.colors(thumbColor = PowerRed, activeTrackColor = PowerRed)
+            )
+        }
     ) {
         Canvas(Modifier.fillMaxSize()) {
             val center = Offset(size.width / 2f, size.height / 2f)
@@ -299,11 +327,6 @@ fun PeriodicTrendsInteraction(accent: Color) {
                 drawLine(PowerRed.copy(alpha = 0.3f), start, end, strokeWidth = 1f)
             }
         }
-        
-        Column(Modifier.align(Alignment.BottomEnd).padding(16.dp).width(150.dp)) {
-            Text("Atomic Number (Z)", color = GhostWhite, fontSize = 8.sp)
-            Slider(value = atomicNumber, onValueChange = { atomicNumber = it }, valueRange = 1f..20f)
-        }
     }
 }
 
@@ -320,7 +343,17 @@ fun ChemicalBondingInteraction(accent: Color) {
             "Type:" to if(isIonic) "Ionic" else "Covalent",
             "Bond E:" to if(isIonic) "High" else "Medium",
             "Force:" to if(isIonic) "Electrostatic" else "Sharing"
-        )
+        ),
+        controls = {
+            Button(
+                onClick = { isIonic = !isIonic },
+                modifier = Modifier.fillMaxWidth().height(44.dp),
+                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = accent)
+            ) {
+                Text(if(isIonic) "SWITCH TO COVALENT" else "SWITCH TO IONIC", fontSize = 12.sp, fontWeight = FontWeight.Black)
+            }
+        }
     ) {
         Canvas(Modifier.fillMaxSize()) {
             val centerY = size.height / 2f
@@ -341,12 +374,6 @@ fun ChemicalBondingInteraction(accent: Color) {
                 drawCircle(NeonCyan, radius = 5f, center = Offset(ex, centerY))
             }
         }
-        
-        Row(Modifier.align(Alignment.BottomEnd).padding(16.dp)) {
-            Button(onClick = { isIonic = !isIonic }, colors = ButtonDefaults.buttonColors(containerColor = accent)) {
-                Text(if(isIonic) "Switch to Covalent" else "Switch to Ionic", fontSize = 10.sp)
-            }
-        }
     }
 }
 
@@ -363,7 +390,13 @@ fun EndocrineInteraction(accent: Color) {
             "Status:" to if(isActive) "Secreting" else "Idle",
             "Signal:" to "Chemical",
             "Level:" to if(isActive) "Peak" else "Basal"
-        )
+        ),
+        controls = {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text(if(isActive) "STOP SECRETION" else "START SECRETION", color = GhostWhite, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                Switch(checked = isActive, onCheckedChange = { isActive = it }, colors = SwitchDefaults.colors(checkedThumbColor = accent))
+            }
+        }
     ) {
         Canvas(Modifier.fillMaxSize()) {
             val centerY = size.height / 2f
@@ -384,8 +417,6 @@ fun EndocrineInteraction(accent: Color) {
                 }
             }
         }
-        
-        Switch(checked = isActive, onCheckedChange = { isActive = it }, modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp))
     }
 }
 
@@ -402,7 +433,17 @@ fun NervousSystemInteraction(accent: Color) {
             "State:" to if(pulse > 0) "Firing" else "Resting",
             "Voltage:" to if(pulse > 0) "+40 mV" else "-70 mV",
             "Speed:" to "120 m/s"
-        )
+        ),
+        controls = {
+            Button(
+                onClick = { triggerAction++ },
+                modifier = Modifier.fillMaxWidth().height(44.dp),
+                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = accent)
+            ) {
+                Text("FIRE NEURAL IMPULSE", fontSize = 12.sp, fontWeight = FontWeight.Black)
+            }
+        }
     ) {
         Canvas(Modifier.fillMaxSize()) {
             val centerY = size.height / 2f
@@ -421,10 +462,6 @@ fun NervousSystemInteraction(accent: Color) {
                 drawCircle(NeonCyan.copy(alpha = 0.3f), radius = 20f, center = Offset(ix, centerY))
             }
         }
-        
-        Button(onClick = { triggerAction++ }, modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp)) {
-            Text("FIRE NEURON", fontSize = 10.sp)
-        }
     }
 }
 
@@ -440,7 +477,15 @@ fun EcologyInteraction(accent: Color) {
             "Level:" to when(trophicLevel.toInt()) { 1 -> "Producer"; 2 -> "Primary"; 3 -> "Secondary"; else -> "Tertiary" },
             "Energy:" to "${(1000 / (10f.pow(trophicLevel-1))).toInt()} kcal",
             "Efficiency:" to "10%"
-        )
+        ),
+        controls = {
+            Text("Trophic Level Transition", color = GhostWhite.copy(alpha = 0.6f), fontSize = 10.sp, fontWeight = FontWeight.Bold)
+            Slider(
+                value = trophicLevel, onValueChange = { trophicLevel = it }, valueRange = 1f..4f, steps = 2,
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                colors = SliderDefaults.colors(thumbColor = BioLime, activeTrackColor = BioLime)
+            )
+        }
     ) {
         Canvas(Modifier.fillMaxSize()) {
             val center = Offset(size.width / 2f, size.height / 2f)
@@ -460,11 +505,6 @@ fun EcologyInteraction(accent: Color) {
                 }
             }
         }
-        
-        Slider(
-            value = trophicLevel, onValueChange = { trophicLevel = it }, valueRange = 1f..4f, steps = 2,
-            modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp).width(120.dp)
-        )
     }
 }
 
@@ -494,7 +534,19 @@ fun KinematicsInteraction(accent: Color) {
             "T:" to "${"%.1f".format(time)}s",
             "V:" to "${"%.1f".format(currentVelocity)}m/s",
             "S:" to "${"%.1f".format(displacement)}m"
-        )
+        ),
+        controls = {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                Column(Modifier.weight(1f)) {
+                    Text("Initial Velocity", color = accent, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                    Slider(value = velocity, onValueChange = { velocity = it }, valueRange = 1f..10f, colors = SliderDefaults.colors(thumbColor = accent, activeTrackColor = accent))
+                }
+                Column(Modifier.weight(1f)) {
+                    Text("Acceleration", color = PowerRed, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                    Slider(value = acceleration, onValueChange = { acceleration = it }, valueRange = 0f..2f, colors = SliderDefaults.colors(thumbColor = PowerRed, activeTrackColor = PowerRed))
+                }
+            }
+        }
     ) {
         Canvas(Modifier.fillMaxSize()) {
             val centerY = size.height / 2f
@@ -522,13 +574,6 @@ fun KinematicsInteraction(accent: Color) {
                 close()
             }
             drawPath(path, PowerRed)
-        }
-        
-        Column(Modifier.align(Alignment.BottomEnd).padding(16.dp).width(120.dp)) {
-            Text("V-Initial", color = GhostWhite, fontSize = 8.sp)
-            Slider(value = velocity, onValueChange = { velocity = it }, valueRange = 1f..10f, colors = SliderDefaults.colors(thumbColor = accent, activeTrackColor = accent))
-            Text("Acceleration", color = GhostWhite, fontSize = 8.sp)
-            Slider(value = acceleration, onValueChange = { acceleration = it }, valueRange = 0f..2f, colors = SliderDefaults.colors(thumbColor = PowerRed, activeTrackColor = PowerRed))
         }
     }
 }
@@ -564,7 +609,19 @@ fun NewtonsLawInteraction(accent: Color) {
             "F:" to "${force.toInt()}N",
             "M:" to "${mass.toInt()}kg",
             "A:" to "${"%.2f".format(acceleration)}m/s²"
-        )
+        ),
+        controls = {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                Column(Modifier.weight(1f)) {
+                    Text("Applied Force (N)", color = PowerRed, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                    Slider(value = force, onValueChange = { force = it }, valueRange = 10f..100f, colors = SliderDefaults.colors(thumbColor = PowerRed, activeTrackColor = PowerRed))
+                }
+                Column(Modifier.weight(1f)) {
+                    Text("Object Mass (kg)", color = accent, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                    Slider(value = mass, onValueChange = { mass = it }, valueRange = 5f..50f, colors = SliderDefaults.colors(thumbColor = accent, activeTrackColor = accent))
+                }
+            }
+        }
     ) {
         Canvas(Modifier.fillMaxSize()) {
             val boxSize = 30f + mass * 1.5f
@@ -595,17 +652,6 @@ fun NewtonsLawInteraction(accent: Color) {
                 drawCircle(NeonCyan.copy(alpha = 1f - offset/100f), radius = 3f, center = Offset(x + boxSize/2 + 10f + offset * (acceleration/2f), centerY))
             }
         }
-        
-        Row(Modifier.align(Alignment.BottomCenter).padding(16.dp).fillMaxWidth(0.7f), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-            Column(Modifier.weight(1f)) {
-                Text("Force (N)", color = PowerRed, fontSize = 8.sp, fontWeight = FontWeight.Bold)
-                Slider(value = force, onValueChange = { force = it }, valueRange = 10f..100f, colors = SliderDefaults.colors(thumbColor = PowerRed, activeTrackColor = PowerRed))
-            }
-            Column(Modifier.weight(1f)) {
-                Text("Mass (kg)", color = accent, fontSize = 8.sp, fontWeight = FontWeight.Bold)
-                Slider(value = mass, onValueChange = { mass = it }, valueRange = 5f..50f, colors = SliderDefaults.colors(thumbColor = accent, activeTrackColor = accent))
-            }
-        }
     }
 }
 
@@ -631,7 +677,16 @@ fun EnergyInteraction(accent: Color) {
             "PE:" to "${"%.1f".format(pe)}J",
             "KE:" to "${"%.1f".format(ke)}J",
             "ΣE:" to "${"%.1f".format(total)}J"
-        )
+        ),
+        controls = {
+            Text("Gravitational Constant (g)", color = GhostWhite.copy(alpha = 0.6f), fontSize = 10.sp, fontWeight = FontWeight.Bold)
+            Slider(
+                value = gravity, onValueChange = { gravity = it }, 
+                valueRange = 1.6f..20f, 
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                colors = SliderDefaults.colors(thumbColor = accent, activeTrackColor = accent)
+            )
+        }
     ) {
         Canvas(Modifier.fillMaxSize()) {
             val center = Offset(size.width / 2f, 30f)
@@ -659,14 +714,6 @@ fun EnergyInteraction(accent: Color) {
             
             drawLine(GhostWhite, Offset(15f, size.height - 20f - total * 2f), Offset(95f, size.height - 20f - total * 2f), strokeWidth = 2f)
         }
-        
-        Slider(
-            value = gravity, onValueChange = { gravity = it }, 
-            valueRange = 1.6f..20f, 
-            modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp).width(120.dp),
-            colors = SliderDefaults.colors(thumbColor = accent, activeTrackColor = accent)
-        )
-        Text("Gravity (g)", Modifier.align(Alignment.BottomEnd).padding(end = 16.dp, bottom = 50.dp), color = GhostWhite, fontSize = 8.sp)
     }
 }
 
@@ -682,7 +729,16 @@ fun ReflectionInteraction(accent: Color) {
             "θi:" to "${angle.toInt()}°",
             "θr:" to "${angle.toInt()}°",
             "Medium:" to "Mirror"
-        )
+        ),
+        controls = {
+            Text("Incident Angle θ", color = GhostWhite.copy(alpha = 0.6f), fontSize = 10.sp, fontWeight = FontWeight.Bold)
+            Slider(
+                value = angle, onValueChange = { angle = it }, 
+                valueRange = 5f..85f, 
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                colors = SliderDefaults.colors(thumbColor = accent, activeTrackColor = accent)
+            )
+        }
     ) {
         Canvas(Modifier.fillMaxSize()) {
             val center = Offset(size.width / 2f, size.height - 40f)
@@ -713,13 +769,6 @@ fun ReflectionInteraction(accent: Color) {
             drawArc(accent.copy(alpha = 0.2f), 270f - angle, angle, true, Offset(center.x - 30f, center.y - 30f), Size(60f, 60f))
             drawArc(PowerRed.copy(alpha = 0.2f), 270f, angle, true, Offset(center.x - 30f, center.y - 30f), Size(60f, 60f))
         }
-        
-        Slider(
-            value = angle, onValueChange = { angle = it }, 
-            valueRange = 5f..85f, 
-            modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp).width(150.dp),
-            colors = SliderDefaults.colors(thumbColor = accent, activeTrackColor = accent)
-        )
     }
 }
 
@@ -741,7 +790,14 @@ fun HeatTransferInteraction(accent: Color) {
             "Mode:" to if(conductionMode) "Conduction" else "Convection",
             "ΔT:" to "High",
             "Flux:" to "${(flow * 100).toInt()} W/m²"
-        )
+        ),
+        controls = {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text("CONVECTION", color = if(!conductionMode) NeonCyan else GhostWhite.copy(alpha = 0.4f), fontSize = 10.sp, fontWeight = FontWeight.Black)
+                Switch(checked = conductionMode, onCheckedChange = { conductionMode = it }, colors = SwitchDefaults.colors(checkedThumbColor = accent))
+                Text("CONDUCTION", color = if(conductionMode) accent else GhostWhite.copy(alpha = 0.4f), fontSize = 10.sp, fontWeight = FontWeight.Black)
+            }
+        }
     ) {
         Canvas(Modifier.fillMaxSize()) {
             val centerY = size.height / 2f
@@ -775,12 +831,6 @@ fun HeatTransferInteraction(accent: Color) {
                 drawRect(NeonCyan.copy(alpha = 0.1f), Offset(size.width/2 - 100f, centerY - 60f), Size(200f, 120f), style = Stroke(2f))
             }
         }
-        
-        Row(Modifier.align(Alignment.BottomEnd).padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text("Convection", color = GhostWhite, fontSize = 8.sp)
-            Switch(checked = conductionMode, onCheckedChange = { conductionMode = it }, colors = SwitchDefaults.colors(checkedThumbColor = accent))
-            Text("Conduction", color = GhostWhite, fontSize = 8.sp)
-        }
     }
 }
 
@@ -798,7 +848,19 @@ fun WaveMechanicsInteraction(accent: Color) {
             "Freq:" to "${"%.1f".format(freq)} Hz",
             "λ:" to "${"%.1f".format(400f/freq)} px",
             "Phase:" to "${(time * 180 / PI).toInt()}°"
-        )
+        ),
+        controls = {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                Column(Modifier.weight(1f)) {
+                    Text("Frequency", color = accent, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                    Slider(value = freq, onValueChange = { freq = it }, valueRange = 0.5f..5f, colors = SliderDefaults.colors(thumbColor = accent, activeTrackColor = accent))
+                }
+                Column(Modifier.weight(1f)) {
+                    Text("Amplitude", color = PowerRed, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                    Slider(value = amp, onValueChange = { amp = it }, valueRange = 10f..80f, colors = SliderDefaults.colors(thumbColor = PowerRed, activeTrackColor = PowerRed))
+                }
+            }
+        }
     ) {
         Canvas(Modifier.fillMaxSize()) {
             val centerY = size.height / 2f
@@ -820,13 +882,6 @@ fun WaveMechanicsInteraction(accent: Color) {
             if (crestX > 0 && crestX < size.width) {
                 drawCircle(PowerRed, radius = 6f, center = Offset(crestX, centerY - amp))
             }
-        }
-        
-        Column(Modifier.align(Alignment.BottomEnd).padding(16.dp).width(120.dp)) {
-            Text("Frequency", color = GhostWhite, fontSize = 8.sp)
-            Slider(value = freq, onValueChange = { freq = it }, valueRange = 0.5f..5f)
-            Text("Amplitude", color = GhostWhite, fontSize = 8.sp)
-            Slider(value = amp, onValueChange = { amp = it }, valueRange = 10f..80f)
         }
     }
 }
@@ -852,7 +907,16 @@ fun StatesOfMatterInteraction(accent: Color) {
             "Temp:" to "${temp.toInt()}°C",
             "State:" to state,
             "Ek:" to "${(temp * 1.5).toInt()} meV"
-        )
+        ),
+        controls = {
+            Text("Thermal Energy Level", color = color, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+            Slider(
+                value = temp, onValueChange = { temp = it }, 
+                valueRange = 0f..100f, 
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                colors = SliderDefaults.colors(thumbColor = color, activeTrackColor = color)
+            )
+        }
     ) {
         Canvas(Modifier.fillMaxSize()) {
             val rows = if(state == "GAS") 2 else 4
@@ -879,13 +943,6 @@ fun StatesOfMatterInteraction(accent: Color) {
                 }
             }
         }
-        
-        Slider(
-            value = temp, onValueChange = { temp = it }, 
-            valueRange = 0f..100f, 
-            modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp).width(180.dp),
-            colors = SliderDefaults.colors(thumbColor = color, activeTrackColor = color)
-        )
     }
 }
 
@@ -901,7 +958,14 @@ fun ElementsMixturesInteraction(accent: Color) {
             "Type:" to if(showMixture) "Mixture" else "Pure Element",
             "Homogeneity:" to "High",
             "Phase:" to "Solid"
-        )
+        ),
+        controls = {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text("PURE SUBSTANCE", color = if(!showMixture) accent else GhostWhite.copy(alpha = 0.4f), fontSize = 10.sp, fontWeight = FontWeight.Black)
+                Switch(checked = showMixture, onCheckedChange = { showMixture = it }, colors = SwitchDefaults.colors(checkedThumbColor = TechViolet))
+                Text("HETEROGENEOUS MIXTURE", color = if(showMixture) TechViolet else GhostWhite.copy(alpha = 0.4f), fontSize = 10.sp, fontWeight = FontWeight.Black)
+            }
+        }
     ) {
         Canvas(Modifier.fillMaxSize()) {
             val cols = 8
@@ -926,12 +990,6 @@ fun ElementsMixturesInteraction(accent: Color) {
                 }
             }
         }
-        
-        Row(Modifier.align(Alignment.BottomEnd).padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text("Pure", color = GhostWhite, fontSize = 8.sp)
-            Switch(checked = showMixture, onCheckedChange = { showMixture = it }, colors = SwitchDefaults.colors(checkedThumbColor = TechViolet))
-            Text("Mixture", color = GhostWhite, fontSize = 8.sp)
-        }
     }
 }
 
@@ -950,7 +1008,16 @@ fun AtomModelInteraction(accent: Color) {
             "Element:" to elementName,
             "Z:" to "$protons",
             "Electrons:" to "$protons"
-        )
+        ),
+        controls = {
+            Text("Proton Count (Z)", color = PowerRed, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+            Slider(
+                value = protons.toFloat(), onValueChange = { protons = it.toInt() }, 
+                valueRange = 1f..10f, steps = 8,
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                colors = SliderDefaults.colors(thumbColor = PowerRed)
+            )
+        }
     ) {
         Canvas(Modifier.fillMaxSize()) {
             val center = Offset(size.width / 2f, size.height / 2f)
@@ -988,13 +1055,6 @@ fun AtomModelInteraction(accent: Color) {
                 }
             }
         }
-        
-        Slider(
-            value = protons.toFloat(), onValueChange = { protons = it.toInt() }, 
-            valueRange = 1f..10f, steps = 8,
-            modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp).width(150.dp),
-            colors = SliderDefaults.colors(thumbColor = PowerRed)
-        )
     }
 }
 
@@ -1010,7 +1070,14 @@ fun ChemicalChangeInteraction(accent: Color) {
             "Reaction:" to "A + B → AB",
             "Yield:" to "${(progress * 100).toInt()}%",
             "Enthalpy:" to "Exothermic"
-        )
+        ),
+        controls = {
+            Text("Reaction Progress", color = GhostWhite, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+            Slider(
+                value = progress, onValueChange = { progress = it }, 
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)
+            )
+        }
     ) {
         Canvas(Modifier.fillMaxSize()) {
             val centerX = size.width / 2f
@@ -1042,11 +1109,6 @@ fun ChemicalChangeInteraction(accent: Color) {
                 }
             }
         }
-        
-        Slider(
-            value = progress, onValueChange = { progress = it }, 
-            modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp).width(180.dp)
-        )
     }
 }
 
@@ -1069,7 +1131,15 @@ fun AcidsBasesInteraction(accent: Color) {
             "pH:" to "%.1f".format(ph),
             "Nature:" to when { ph < 6.5 -> "Acidic"; ph > 7.5 -> "Alkaline"; else -> "Neutral" },
             "[H+]:" to "10^-${ph.toInt()} M"
-        )
+        ),
+        controls = {
+            Text("Adjust pH Level", color = phColor, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+            Slider(
+                value = ph, onValueChange = { ph = it }, valueRange = 0f..14f,
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                colors = SliderDefaults.colors(thumbColor = phColor, activeTrackColor = phColor)
+            )
+        }
     ) {
         Column(Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
             Box(
@@ -1087,12 +1157,6 @@ fun AcidsBasesInteraction(accent: Color) {
                 drawCircle(Color.White, radius = 6f, center = Offset(markerX, size.height/2))
             }
         }
-        
-        Slider(
-            value = ph, onValueChange = { ph = it }, valueRange = 0f..14f,
-            modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp).width(200.dp),
-            colors = SliderDefaults.colors(thumbColor = phColor, activeTrackColor = phColor)
-        )
     }
 }
 
@@ -1109,7 +1173,14 @@ fun QuantumAtomicInteraction(accent: Color) {
             "Level (n):" to "$n",
             "Orbital:" to when(n) { 1 -> "1s"; 2 -> "2s"; 3 -> "3s"; else -> "ns" },
             "ψ²:" to "Probabilistic"
-        )
+        ),
+        controls = {
+            Text("Principal Quantum Number (n)", color = accent, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+            Slider(
+                value = n.toFloat(), onValueChange = { n = it.toInt() }, valueRange = 1f..4f, steps = 2,
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)
+            )
+        }
     ) {
         Canvas(Modifier.fillMaxSize()) {
             val center = Offset(size.width / 2f, size.height / 2f)
@@ -1128,12 +1199,6 @@ fun QuantumAtomicInteraction(accent: Color) {
                 drawCircle(accent.copy(alpha = 0.05f), radius = 2f, center = Offset(px, py))
             }
         }
-        
-        Slider(
-            value = n.toFloat(), onValueChange = { n = it.toInt() }, valueRange = 1f..4f, steps = 2,
-            modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp).width(120.dp)
-        )
-        Text("Quantum No. n", Modifier.align(Alignment.BottomEnd).padding(end = 16.dp, bottom = 50.dp), color = GhostWhite, fontSize = 8.sp)
     }
 }
 
@@ -1150,7 +1215,16 @@ fun CellInteraction(accent: Color) {
             "Selected:" to selectedOrganelle,
             "Activity:" to "Metabolic",
             "ATP Level:" to "Optimal"
-        )
+        ),
+        controls = {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
+                OrganelleChip("Nucleus", selectedOrganelle == "Nucleus") { selectedOrganelle = it }
+                Spacer(Modifier.width(8.dp))
+                OrganelleChip("Mitochondria", selectedOrganelle == "Mitochondria") { selectedOrganelle = it }
+                Spacer(Modifier.width(8.dp))
+                OrganelleChip("Ribosomes", selectedOrganelle == "Ribosomes") { selectedOrganelle = it }
+            }
+        }
     ) {
         Canvas(Modifier.fillMaxSize()) {
             val center = Offset(size.width / 2f, size.height / 2f)
@@ -1174,12 +1248,6 @@ fun CellInteraction(accent: Color) {
                 drawOval(mColor, topLeft = Offset(mx-15f, my-8f), size = Size(30f, 16f))
             }
         }
-        
-        Row(Modifier.align(Alignment.BottomCenter).padding(16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            OrganelleChip("Nucleus", selectedOrganelle == "Nucleus") { selectedOrganelle = it }
-            OrganelleChip("Mitochondria", selectedOrganelle == "Mitochondria") { selectedOrganelle = it }
-            OrganelleChip("Ribosomes", selectedOrganelle == "Ribosomes") { selectedOrganelle = it }
-        }
     }
 }
 
@@ -1196,7 +1264,24 @@ fun PlantTissueInteraction(accent: Color) {
             "Tissue:" to mode,
             "Transport:" to if(mode == "Xylem") "Water/Minerals" else "Sucrose/Food",
             "Direction:" to if(mode == "Xylem") "Unidirectional" else "Bidirectional"
-        )
+        ),
+        controls = {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
+                Button(
+                    onClick = { mode = "Xylem" }, 
+                    modifier = Modifier.weight(1f).height(44.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = if(mode == "Xylem") accent else CardBg)
+                ) { Text("XYLEM", fontSize = 12.sp, fontWeight = FontWeight.Black) }
+                Spacer(Modifier.width(12.dp))
+                Button(
+                    onClick = { mode = "Phloem" }, 
+                    modifier = Modifier.weight(1f).height(44.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = if(mode == "Phloem") accent else CardBg)
+                ) { Text("PHLOEM", fontSize = 12.sp, fontWeight = FontWeight.Black) }
+            }
+        }
     ) {
         Canvas(Modifier.fillMaxSize()) {
             val spacing = 60f
@@ -1214,12 +1299,6 @@ fun PlantTissueInteraction(accent: Color) {
                 }
             }
         }
-        
-        Row(Modifier.align(Alignment.BottomEnd).padding(16.dp)) {
-            Button(onClick = { mode = "Xylem" }, colors = ButtonDefaults.buttonColors(containerColor = if(mode == "Xylem") accent else CardBg)) { Text("Xylem", fontSize = 10.sp) }
-            Spacer(Modifier.width(8.dp))
-            Button(onClick = { mode = "Phloem" }, colors = ButtonDefaults.buttonColors(containerColor = if(mode == "Phloem") accent else CardBg)) { Text("Phloem", fontSize = 10.sp) }
-        }
     }
 }
 
@@ -1235,7 +1314,15 @@ fun NutritionInteraction(accent: Color) {
             "Light:" to "${lightIntensity.toInt()}%",
             "CO2 Fix:" to "Active",
             "Rate:" to "${(lightIntensity * 0.8).toInt()} μmol/s"
-        )
+        ),
+        controls = {
+            Text("Light Source Intensity", color = Color.Yellow, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+            Slider(
+                value = lightIntensity, onValueChange = { lightIntensity = it },
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                colors = SliderDefaults.colors(thumbColor = Color.Yellow)
+            )
+        }
     ) {
         Canvas(Modifier.fillMaxSize()) {
             val center = Offset(size.width / 2f, size.height / 2f)
@@ -1266,12 +1353,6 @@ fun NutritionInteraction(accent: Color) {
                 }
             }
         }
-        
-        Slider(
-            value = lightIntensity, onValueChange = { lightIntensity = it },
-            modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp).width(150.dp),
-            colors = SliderDefaults.colors(thumbColor = Color.Yellow)
-        )
     }
 }
 

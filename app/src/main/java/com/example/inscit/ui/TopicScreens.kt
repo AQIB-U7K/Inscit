@@ -52,9 +52,9 @@ fun TopicSelectionScreen(
             Text("$branchName TOPICS", fontSize = 20.sp, fontWeight = FontWeight.Black, color = txtCol, letterSpacing = 2.sp)
         }
 
-        Spacer(Modifier.height(40.dp))
+        Spacer(Modifier.height(48.dp))
 
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(horizontal = 8.dp)) {
             Text(
                 if (lang == Lang.EN) "Select a specialized module to explore."
                 else "अन्वेषण करने के लिए एक विशेष मॉड्यूल चुनें।",
@@ -72,11 +72,12 @@ fun TopicSelectionScreen(
             }
         }
 
-        Spacer(Modifier.height(32.dp))
+        Spacer(Modifier.height(40.dp))
 
         LazyColumn(
             verticalArrangement = Arrangement.spacedBy(16.dp),
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
+            contentPadding = PaddingValues(bottom = 24.dp)
         ) {
             items(topics) { topic ->
                 Surface(
@@ -164,30 +165,30 @@ fun TopicDetailScreen(
             // Topic-Specific Interactive Diagram
             InteractiveTopicDiagram(topic, accent)
 
-            Spacer(Modifier.height(32.dp))
+            Spacer(Modifier.height(48.dp))
 
             topic.paragraphs.forEachIndexed { index, para ->
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(vertical = 8.dp)
-                        .background(CardBg, RoundedCornerShape(16.dp))
-                        .border(1.dp, GhostWhite.copy(alpha = 0.05f), RoundedCornerShape(16.dp))
-                        .padding(20.dp)
+                        .padding(vertical = 12.dp)
+                        .background(CardBg, RoundedCornerShape(20.dp))
+                        .border(1.dp, GhostWhite.copy(alpha = 0.05f), RoundedCornerShape(20.dp))
+                        .padding(24.dp)
                 ) {
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                         Text(
                             if (lang == Lang.EN) "CONCEPT ${index + 1}" else "अवधारणा ${index + 1}",
                             color = accent,
-                            fontSize = 10.sp,
+                            fontSize = 11.sp,
                             fontWeight = FontWeight.Black,
                             letterSpacing = 2.sp
                         )
-                        IconButton(onClick = { tts.speak(para) }, modifier = Modifier.size(24.dp)) {
-                            SpeakerIcon(accent, Modifier.size(18.dp))
+                        IconButton(onClick = { tts.speak(para) }, modifier = Modifier.size(28.dp)) {
+                            SpeakerIcon(accent, Modifier.size(20.dp))
                         }
                     }
-                    Spacer(Modifier.height(8.dp))
+                    Spacer(Modifier.height(12.dp))
                     Text(
                         para,
                         color = GhostWhite.copy(alpha = 0.8f),
@@ -197,19 +198,19 @@ fun TopicDetailScreen(
                 }
             }
             
-            Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.height(40.dp))
             
             Button(
                 onClick = onLabClick,
-                modifier = Modifier.fillMaxWidth().height(56.dp),
+                modifier = Modifier.fillMaxWidth().height(60.dp),
                 shape = RoundedCornerShape(16.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = accent.copy(alpha = 0.1f), contentColor = accent),
                 border = BorderStroke(1.dp, accent.copy(alpha = 0.3f))
             ) {
-                Text(if (lang == Lang.EN) "ENTER RESEARCH LAB" else "अनुसंधान लैब में प्रवेश करें", fontWeight = FontWeight.Bold)
+                Text(if (lang == Lang.EN) "ENTER RESEARCH LAB" else "अनुसंधान लैब में प्रवेश करें", fontWeight = FontWeight.Bold, fontSize = 16.sp)
             }
             
-            Spacer(Modifier.height(32.dp))
+            Spacer(Modifier.height(48.dp))
         }
     }
 }

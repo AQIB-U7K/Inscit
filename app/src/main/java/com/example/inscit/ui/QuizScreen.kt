@@ -99,53 +99,61 @@ private fun QuizContent(
     ) {
         val progress = (state.currentIndex + 1).toFloat() / state.totalQuestions
         
+        Spacer(Modifier.height(16.dp))
+
         LinearProgressIndicator(
             progress = { progress },
             modifier = Modifier
                 .fillMaxWidth()
-                .height(8.dp)
+                .height(10.dp)
                 .clip(CircleShape),
             color = accent,
             trackColor = accent.copy(alpha = 0.2f)
         )
         
-        Spacer(Modifier.height(40.dp))
+        Spacer(Modifier.height(48.dp))
 
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = if (lang == Lang.EN) "QUESTION ${state.currentIndex + 1}" else "प्रश्न ${state.currentIndex + 1}",
+                text = if (lang == Lang.EN) "QUESTION ${state.currentIndex + 1} of ${state.totalQuestions}" else "प्रश्न ${state.currentIndex + 1} / ${state.totalQuestions}",
                 color = accent,
                 fontWeight = FontWeight.Bold,
+                fontSize = 12.sp,
                 letterSpacing = 2.sp
             )
             
             Text(
-                text = "PENDING XP: ${viewModel.pendingXp}",
+                text = "XP: ${viewModel.pendingXp}",
                 color = GhostWhite.copy(alpha = 0.5f),
                 fontSize = 12.sp,
-                fontWeight = FontWeight.Bold
+                fontWeight = FontWeight.Black
             )
         }
 
-        Spacer(Modifier.height(20.dp))
+        Spacer(Modifier.height(32.dp))
 
-        Text(
-            text = state.currentQuestion.text,
-            fontSize = 26.sp,
-            color = GhostWhite,
-            textAlign = TextAlign.Center,
-            fontWeight = FontWeight.Bold,
-            lineHeight = 36.sp,
-            modifier = Modifier.fillMaxWidth()
-        )
+        Box(modifier = Modifier.weight(1.2f), contentAlignment = Alignment.Center) {
+            Text(
+                text = state.currentQuestion.text,
+                fontSize = 28.sp,
+                color = GhostWhite,
+                textAlign = TextAlign.Center,
+                fontWeight = FontWeight.Bold,
+                lineHeight = 38.sp,
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
 
-        Spacer(Modifier.weight(1f))
+        Spacer(Modifier.height(40.dp))
 
-        Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        Column(
+            modifier = Modifier.weight(2f),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
             state.currentQuestion.options.forEach { option ->
                 val isSelected = state.selectedOptionId == option.id
                 val isCorrect = option.isCorrect
@@ -159,7 +167,7 @@ private fun QuizContent(
                 val borderColor = when {
                     isSelected && isCorrect -> Color(0xFF4CAF50)
                     isSelected && !isCorrect -> Color(0xFFF44336)
-                    else -> GhostWhite.copy(alpha = 0.2f)
+                    else -> GhostWhite.copy(alpha = 0.15f)
                 }
 
                 Button(
@@ -167,25 +175,27 @@ private fun QuizContent(
                     enabled = !state.isTransitioning,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(72.dp),
-                    shape = RoundedCornerShape(16.dp),
+                        .height(80.dp),
+                    shape = RoundedCornerShape(20.dp),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = backgroundColor,
                         disabledContainerColor = backgroundColor,
                         contentColor = GhostWhite
                     ),
-                    border = BorderStroke(1.5.dp, borderColor)
+                    border = BorderStroke(1.5.dp, borderColor),
+                    contentPadding = PaddingValues(horizontal = 24.dp)
                 ) {
                     Text(
                         text = option.text.uppercase(),
-                        fontSize = 20.sp,
+                        fontSize = 18.sp,
                         fontWeight = FontWeight.Black,
-                        letterSpacing = 2.sp
+                        letterSpacing = 1.sp,
+                        textAlign = TextAlign.Center
                     )
                 }
             }
         }
         
-        Spacer(Modifier.height(40.dp))
+        Spacer(Modifier.height(24.dp))
     }
 }
