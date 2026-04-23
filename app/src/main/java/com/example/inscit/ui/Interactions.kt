@@ -28,100 +28,155 @@ import com.example.inscit.models.TopicDetail
 import kotlin.math.*
 
 @Composable
-fun InteractionContainer(
-    title: String,
+fun InteractionControlPanel(
     accent: Color,
-    legend: List<Pair<String, Color>>,
-    liveIndexes: List<Pair<String, String>>,
-    controls: @Composable ColumnScope.() -> Unit = {},
-    content: @Composable BoxScope.() -> Unit
+    content: @Composable ColumnScope.() -> Unit
 ) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .background(CardBg, RoundedCornerShape(28.dp))
-            .border(1.dp, GhostWhite.copy(alpha = 0.05f), RoundedCornerShape(28.dp))
+            .padding(top = 16.dp)
+            .background(CardBg, RoundedCornerShape(24.dp))
+            .border(1.dp, GhostWhite.copy(alpha = 0.05f), RoundedCornerShape(24.dp))
             .padding(20.dp)
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
+            modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            Box(
+                modifier = Modifier
+                    .size(24.dp)
+                    .background(accent.copy(alpha = 0.1f), CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                SettingsIcon(accent, Modifier.size(14.dp))
+            }
+            Spacer(Modifier.width(12.dp))
             Text(
-                title.uppercase(),
+                "INTERACTIVE PARAMETERS",
                 color = GhostWhite,
-                fontSize = 13.sp,
+                fontSize = 12.sp,
                 fontWeight = FontWeight.Black,
                 letterSpacing = 1.sp
             )
+            Spacer(Modifier.weight(1f))
             Box(
                 modifier = Modifier
-                    .size(10.dp)
-                    .background(accent, CircleShape)
-                    .padding(2.dp)
+                    .width(40.dp)
+                    .height(4.dp)
+                    .clip(CircleShape)
+                    .background(GhostWhite.copy(alpha = 0.05f))
             )
         }
         
         Spacer(Modifier.height(20.dp))
         
-        Box(
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(260.dp)
-                .clip(RoundedCornerShape(20.dp))
-                .background(Color.Black.copy(alpha = 0.4f))
+                .background(accent.copy(alpha = 0.03f), RoundedCornerShape(16.dp))
+                .border(1.dp, accent.copy(alpha = 0.05f), RoundedCornerShape(16.dp))
+                .padding(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
             content()
-            
-            // Legend Corner
-            Column(
-                modifier = Modifier
-                    .align(Alignment.BottomStart)
-                    .padding(16.dp)
-                    .background(DeepSpace.copy(alpha = 0.8f), RoundedCornerShape(12.dp))
-                    .border(0.5.dp, GhostWhite.copy(alpha = 0.1f), RoundedCornerShape(12.dp))
-                    .padding(10.dp)
+        }
+    }
+}
+
+@Composable
+fun InteractionContainer(
+    title: String,
+    accent: Color,
+    legend: List<Pair<String, Color>>,
+    liveIndexes: List<Pair<String, String>>,
+    controls: (@Composable ColumnScope.() -> Unit)? = null,
+    content: @Composable BoxScope.() -> Unit
+) {
+    Column(modifier = Modifier.fillMaxWidth()) {
+        // Main Diagram Card
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(CardBg, RoundedCornerShape(28.dp))
+                .border(1.dp, GhostWhite.copy(alpha = 0.05f), RoundedCornerShape(28.dp))
+                .padding(20.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                legend.forEach { (label, color) ->
-                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 3.dp)) {
-                        Box(Modifier.size(8.dp).background(color, CircleShape))
-                        Spacer(Modifier.width(8.dp))
-                        Text(label, fontSize = 9.sp, color = GhostWhite.copy(alpha = 0.8f), fontWeight = FontWeight.Bold)
-                    }
-                }
+                Text(
+                    title.uppercase(),
+                    color = GhostWhite,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Black,
+                    letterSpacing = 1.sp
+                )
+                Box(
+                    modifier = Modifier
+                        .size(10.dp)
+                        .background(accent, CircleShape)
+                        .padding(2.dp)
+                )
             }
             
-            // Live Index Corner
-            Column(
+            Spacer(Modifier.height(20.dp))
+            
+            Box(
                 modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(16.dp)
-                    .background(accent.copy(alpha = 0.15f), RoundedCornerShape(12.dp))
-                    .border(1.dp, accent.copy(alpha = 0.3f), RoundedCornerShape(12.dp))
-                    .padding(horizontal = 10.dp, vertical = 6.dp)
+                    .fillMaxWidth()
+                    .height(260.dp)
+                    .clip(RoundedCornerShape(20.dp))
+                    .background(Color.Black.copy(alpha = 0.4f))
             ) {
-                liveIndexes.forEach { (key, value) ->
-                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 1.dp)) {
-                        Text(key, fontSize = 10.sp, color = accent, fontWeight = FontWeight.Black)
-                        Spacer(Modifier.width(6.dp))
-                        Text(value, fontSize = 11.sp, color = GhostWhite, fontWeight = FontWeight.Bold)
+                content()
+                
+                // Legend Corner
+                Column(
+                    modifier = Modifier
+                        .align(Alignment.BottomStart)
+                        .padding(16.dp)
+                        .background(DeepSpace.copy(alpha = 0.8f), RoundedCornerShape(12.dp))
+                        .border(0.5.dp, GhostWhite.copy(alpha = 0.1f), RoundedCornerShape(12.dp))
+                        .padding(10.dp)
+                ) {
+                    legend.forEach { (label, color) ->
+                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 3.dp)) {
+                            Box(Modifier.size(8.dp).background(color, CircleShape))
+                            Spacer(Modifier.width(8.dp))
+                            Text(label, fontSize = 9.sp, color = GhostWhite.copy(alpha = 0.8f), fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+                
+                // Live Index Corner
+                Column(
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(16.dp)
+                        .background(accent.copy(alpha = 0.15f), RoundedCornerShape(12.dp))
+                        .border(1.dp, accent.copy(alpha = 0.3f), RoundedCornerShape(12.dp))
+                        .padding(horizontal = 10.dp, vertical = 6.dp)
+                ) {
+                    liveIndexes.forEach { (key, value) ->
+                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 1.dp)) {
+                            Text(key, fontSize = 10.sp, color = accent, fontWeight = FontWeight.Black)
+                            Spacer(Modifier.width(6.dp))
+                            Text(value, fontSize = 11.sp, color = GhostWhite, fontWeight = FontWeight.Bold)
+                        }
                     }
                 }
             }
         }
 
-        // Dedicated Controls Section
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 20.dp)
-                .background(accent.copy(alpha = 0.03f), RoundedCornerShape(16.dp))
-                .padding(12.dp),
-            verticalArrangement = Arrangement.Center,
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            controls()
+        // Separate Sub-Section for Controls
+        if (controls != null) {
+            InteractionControlPanel(accent) {
+                controls()
+            }
         }
     }
 }
