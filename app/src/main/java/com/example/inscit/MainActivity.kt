@@ -114,6 +114,11 @@ import com.example.inscit.ui.TopicDetailScreen
 import com.example.inscit.ui.TopicSelectionScreen
 import com.example.inscit.xp.Rank
 import androidx.compose.runtime.MutableState
+import com.example.inscit.notifications.NotificationScheduler
+import android.Manifest
+import android.content.pm.PackageManager
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 import java.io.File
 import java.io.FileOutputStream
 import java.util.Locale
@@ -290,7 +295,19 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         ttsManager = TTSManager(this)
+        
+        checkNotificationPermission()
+        NotificationScheduler.scheduleInactivityNotification(this)
+        
         setContent { AppEngine(ttsManager) }
+    }
+
+    private fun checkNotificationPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.POST_NOTIFICATIONS), 101)
+            }
+        }
     }
 
     override fun onDestroy() {
@@ -553,6 +570,7 @@ fun AppEngine(tts: TTSManager) {
                                     weaknesses = weaknesses
                                 )
                                 userDocument = userDocument.copy(stats = newStats, quizProgress = newProgress)
+                                NotificationScheduler.scheduleInactivityNotification(context)
                                 currentScreen = Screen.HOME
                             }
                         )
