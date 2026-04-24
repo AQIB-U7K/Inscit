@@ -1,5 +1,6 @@
 package com.example.inscit
 
+import android.content.ClipData
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -256,6 +257,27 @@ fun getExportFolder(context: Context): File {
     return folder
 }
 
+fun shareFile(context: Context, file: File) {
+    try {
+        val uri = FileProvider.getUriForFile(
+            context,
+            "${context.packageName}.fileprovider",
+            file
+        )
+        val intent = Intent(Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(Intent.EXTRA_STREAM, uri)
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            clipData = ClipData.newRawUri("", uri)
+        }
+        val chooser = Intent.createChooser(intent, "Share Export")
+        chooser.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        context.startActivity(chooser)
+    } catch (e: Exception) {
+        Toast.makeText(context, "Sharing failed: ${e.message}", Toast.LENGTH_SHORT).show()
+    }
+}
+
 fun saveToTextFile(context: Context, userDoc: UserDocument) {
     val data = """
         INSCIT EXPLORER PROFILE
@@ -280,6 +302,7 @@ fun saveToTextFile(context: Context, userDoc: UserDocument) {
         val file = File(folder, fileName)
         file.writeText(data)
         Toast.makeText(context, "Progress Saved to: ${file.absolutePath}", Toast.LENGTH_LONG).show()
+        shareFile(context, file)
     } catch (e: Exception) {
         Toast.makeText(context, "save processing failed: ${e.message}", Toast.LENGTH_SHORT).show()
     }
@@ -1555,10 +1578,12 @@ fun UserObservationSection(
                 Spacer(Modifier.width(8.dp))
                 IconButton(onClick = {
                     try {
+                        val folder = getExportFolder(context)
                         val fileName = "inscit_note_${branch}_${System.currentTimeMillis()}.txt"
-                        val file = File(context.getExternalFilesDir(null), fileName)
+                        val file = File(folder, fileName)
                         file.writeText("BRANCH: $branch\n\nOBSERVATIONS:\n${userNote.content}")
                         Toast.makeText(context, "Exported to ${file.name}", Toast.LENGTH_SHORT).show()
+                        shareFile(context, file)
                     } catch (e: Exception) {
                         Toast.makeText(context, "Export failed", Toast.LENGTH_SHORT).show()
                     }
@@ -1625,10 +1650,12 @@ fun UserObservationSection(
 
                 IconButton(onClick = {
                     try {
+                        val folder = getExportFolder(context)
                         val fileName = "inscit_note_${branch}_${System.currentTimeMillis()}.txt"
-                        val file = File(context.getExternalFilesDir(null), fileName)
+                        val file = File(folder, fileName)
                         file.writeText("BRANCH: $branch\n\nOBSERVATIONS:\n${userNote.content}")
                         Toast.makeText(context, "Exported to ${file.name}", Toast.LENGTH_SHORT).show()
+                        shareFile(context, file)
                     } catch (e: Exception) {
                         Toast.makeText(context, "Export failed", Toast.LENGTH_SHORT).show()
                     }
@@ -1777,16 +1804,7 @@ fun ExportDetailScreen(
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onBack) { BackIcon(color = txtCol) }
             Text(file.name, fontSize = 16.sp, fontWeight = FontWeight.Black, color = txtCol, modifier = Modifier.weight(1f))
-            IconButton(onClick = {
-                val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
-                val shareIntent = Intent().apply {
-                    action = Intent.ACTION_SEND
-                    putExtra(Intent.EXTRA_STREAM, uri)
-                    type = "text/plain"
-                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                }
-                context.startActivity(Intent.createChooser(shareIntent, "Share Export"))
-            }) { ShareIcon(accent) }
+            IconButton(onClick = { shareFile(context, file) }) { ShareIcon(accent) }
         }
 
         Spacer(Modifier.height(24.dp))
@@ -1805,15 +1823,7 @@ fun ExportDetailScreen(
         Spacer(Modifier.height(24.dp))
         
         Button(
-            onClick = {
-                val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
-                val intent = Intent(Intent.ACTION_SEND).apply {
-                    type = "text/plain"
-                    putExtra(Intent.EXTRA_STREAM, uri)
-                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                }
-                context.startActivity(Intent.createChooser(intent, "Export Data"))
-            },
+            onClick = { shareFile(context, file) },
             modifier = Modifier.fillMaxWidth().height(60.dp),
             shape = RoundedCornerShape(16.dp),
             colors = ButtonDefaults.buttonColors(containerColor = accent, contentColor = DeepSpace)
