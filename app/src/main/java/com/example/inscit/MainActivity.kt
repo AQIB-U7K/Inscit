@@ -120,11 +120,21 @@ import android.Manifest
 import android.content.pm.PackageManager
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.compose.foundation.Image
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.foundation.layout.offset
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.text.TextStyle
 import java.io.File
 import java.io.FileOutputStream
 import java.util.Locale
 
-enum class Screen { SPLASH, HOME, LAB, QUIZ, NOTES, THEME_CONFIG, NOTES_FOLDER, PROFILE, TOPIC_SELECTION, TOPIC_DETAIL, EXPORTS_LIST, EXPORT_DETAIL }
+enum class Screen { SPLASH, HOME, LAB, QUIZ, NOTES, THEME_CONFIG, NOTES_FOLDER, PROFILE, TOPIC_SELECTION, TOPIC_DETAIL, EXPORTS_LIST, EXPORT_DETAIL, RANKINGS }
 enum class Branch { PHYSICS, CHEMISTRY, BIOLOGY }
 
 val DeepSpace = Color(0xFF020408)
@@ -414,6 +424,7 @@ fun AppEngine(tts: TTSManager) {
             Screen.TOPIC_DETAIL -> currentScreen = Screen.TOPIC_SELECTION
             Screen.THEME_CONFIG -> currentScreen = Screen.HOME
             Screen.NOTES_FOLDER -> currentScreen = Screen.THEME_CONFIG
+            Screen.RANKINGS -> currentScreen = Screen.HOME
             Screen.LAB -> {
                 tts.stop()
                 currentScreen = Screen.HOME
@@ -481,9 +492,20 @@ fun AppEngine(tts: TTSManager) {
                             onProfile = {
                                 triggerVibration(context, "CLICK")
                                 currentScreen = Screen.PROFILE
+                            },
+                            onXpClick = {
+                                triggerVibration(context, "CLICK")
+                                currentScreen = Screen.RANKINGS
                             }
                         )
                     }
+                    Screen.RANKINGS -> RankingsScreen(
+                        totalXp = userDocument.stats.xp,
+                        lang = language,
+                        accent = primaryAccent,
+                        txtCol = textColor,
+                        onBack = { currentScreen = Screen.HOME }
+                    )
                     Screen.TOPIC_SELECTION -> TopicSelectionScreen(
                         branch = selectedBranch,
                         lang = language,
@@ -1167,28 +1189,126 @@ fun StatItem(label: String, value: String, accent: Color) {
 }
 
 @Composable
+fun ShimmeringText(
+    text: String,
+    modifier: Modifier = Modifier,
+    textAlign: TextAlign = TextAlign.Center
+) {
+    val shimmerColors = listOf(
+        Color.White.copy(alpha = 0.2f),
+        Color.White.copy(alpha = 0.8f),
+        Color.White.copy(alpha = 0.2f),
+    )
+    val transition = rememberInfiniteTransition(label = "shimmer")
+    val translateAnim by transition.animateFloat(
+        initialValue = -500f,
+        targetValue = 1000f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 2500, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "shimmer_anim"
+    )
+    val brush = Brush.linearGradient(
+        colors = shimmerColors,
+        start = Offset(translateAnim, 0f),
+        end = Offset(translateAnim + 300f, 300f)
+    )
+    Text(
+        text = text,
+        modifier = modifier,
+        textAlign = textAlign,
+        style = TextStyle(
+            brush = brush, 
+            fontWeight = FontWeight.Bold, 
+            fontSize = 13.sp, 
+            letterSpacing = 2.sp
+        )
+    )
+}
+
+@Composable
+fun IosSlider(
+    onSwipeComplete: () -> Unit,
+    accentColor: Color,
+    modifier: Modifier = Modifier
+) {
+    var dragOffset by remember { mutableStateOf(0f) }
+    val density = androidx.compose.ui.platform.LocalDensity.current
+    val swipeThreshold = 0.85f
+    val animatedDragOffset by animateFloatAsState(
+        targetValue = dragOffset,
+        animationSpec = tween(durationMillis = 200),
+        label = "slider_return"
+    )
+
+    BoxWithConstraints(
+        modifier = modifier
+            .clip(RoundedCornerShape(40.dp))
+            .background(Color.White.copy(alpha = 0.05f))
+            .border(1.dp, Color.White.copy(alpha = 0.1f), RoundedCornerShape(40.dp)),
+        contentAlignment = Alignment.CenterStart
+    ) {
+        val widthPx = with(density) { maxWidth.toPx() }
+        val handleSize = maxHeight - 8.dp
+        val handleSizePx = with(density) { handleSize.toPx() }
+        val maxOffsetPx = (widthPx - handleSizePx - with(density) { 8.dp.toPx() }).coerceAtLeast(0f)
+        
+        ShimmeringText(
+            text = "SLIDE TO INITIALIZE",
+            modifier = Modifier.fillMaxWidth()
+        )
+        
+        Box(
+            modifier = Modifier
+                .offset { IntOffset(animatedDragOffset.toInt() + with(density) { 4.dp.toPx() }.toInt(), 0) }
+                .size(handleSize)
+                .padding(4.dp)
+                .clip(CircleShape)
+                .background(accentColor)
+                .pointerInput(Unit) {
+                    detectDragGestures(
+                        onDrag = { change, dragAmount ->
+                            change.consume()
+                            if (maxOffsetPx > 0) {
+                                dragOffset = (dragOffset + dragAmount.x).coerceIn(0f, maxOffsetPx)
+                            }
+                        },
+                        onDragEnd = {
+                            if (maxOffsetPx > 0 && dragOffset >= maxOffsetPx * swipeThreshold) {
+                                dragOffset = maxOffsetPx
+                                onSwipeComplete()
+                            } else {
+                                dragOffset = 0f
+                            }
+                        }
+                    )
+                },
+            contentAlignment = Alignment.Center
+        ) {
+            Text("→", color = Color.Black, fontSize = 24.sp, fontWeight = FontWeight.ExtraBold)
+        }
+    }
+}
+
+@Composable
 fun FullSplashScreen(accent: Color, onExplore: () -> Unit) {
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         HexagonGrid(accent.copy(alpha = 0.08f))
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-            Text(
-                "INSCIT",
-                fontSize = 80.sp,
-                fontWeight = FontWeight.Black,
-                color = GhostWhite,
-                letterSpacing = 10.sp
+            Image(
+                painter = painterResource(id = R.drawable.app_logo),
+                contentDescription = "App Logo",
+                modifier = Modifier.size(160.dp)
             )
-            Spacer(Modifier.height(4.dp))
+            Spacer(Modifier.height(16.dp))
             Text("OMEGA CORE V9.0", color = accent, fontSize = 14.sp, fontWeight = FontWeight.Bold, letterSpacing = 4.sp)
-            Spacer(Modifier.height(60.dp))
-            Button(
-                onClick = onExplore,
-                shape = RoundedCornerShape(12.dp),
-                contentPadding = PaddingValues(horizontal = 40.dp, vertical = 14.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = accent, contentColor = buttonContentColor(accent))
-            ) {
-                Text("INITIALIZE", fontWeight = FontWeight.ExtraBold, letterSpacing = 2.sp)
-            }
+            Spacer(Modifier.height(80.dp))
+            IosSlider(
+                onSwipeComplete = onExplore,
+                accentColor = accent,
+                modifier = Modifier.width(280.dp).height(64.dp)
+            )
         }
     }
 }
@@ -1219,40 +1339,23 @@ fun ModernHome(
     onNav: (Branch) -> Unit,
     onQuiz: () -> Unit,
     onTheme: () -> Unit,
-    onProfile: () -> Unit
+    onProfile: () -> Unit,
+    onXpClick: () -> Unit
 ) {
     Column(
         modifier = Modifier.fillMaxSize().padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Row(
+        Column(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Column {
-                Text(
-                    if (lang == Lang.EN) "SYSTEM ONLINE" else "सिस्टम ऑनलाइन",
-                    color = accent,
-                    fontSize = 10.sp,
-                    fontWeight = FontWeight.Bold,
-                    letterSpacing = 2.sp
-                )
-                Text(
-                    if (lang == Lang.EN) "Hello, $userName" else "नमस्ते, $userName",
-                    color = GhostWhite,
-                    fontSize = 28.sp,
-                    fontWeight = FontWeight.Black,
-                    letterSpacing = 1.sp
-                )
-            }
-            
             Surface(
                 onClick = onProfile,
-                modifier = Modifier.size(50.dp),
+                modifier = Modifier.size(80.dp),
                 shape = CircleShape,
                 color = CardBg,
-                border = BorderStroke(1.dp, accent.copy(alpha = 0.3f))
+                border = BorderStroke(2.dp, accent.copy(alpha = 0.5f))
             ) {
                 ProfileImage(
                     photoUrl = photoUrl,
@@ -1260,31 +1363,40 @@ fun ModernHome(
                     placeholderColor = accent
                 )
             }
+            Spacer(Modifier.height(12.dp))
+            Text(
+                if (lang == Lang.EN) "Hello, $userName" else "नमस्ते, $userName",
+                color = GhostWhite,
+                fontSize = 24.sp,
+                fontWeight = FontWeight.Black,
+                letterSpacing = 1.sp
+            )
         }
         
-        Spacer(Modifier.height(40.dp))
+        Spacer(Modifier.height(32.dp))
         
-        // Stats Overview
+        // Stats Overview - Slimmer version
         Surface(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(24.dp),
+            onClick = onXpClick,
+            modifier = Modifier.fillMaxWidth().height(80.dp),
+            shape = RoundedCornerShape(20.dp),
             color = CardBg,
             border = BorderStroke(1.dp, GhostWhite.copy(alpha = 0.05f))
         ) {
             Row(
-                modifier = Modifier.padding(24.dp),
+                modifier = Modifier.padding(horizontal = 20.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column {
-                    Text(if (lang == Lang.EN) "CURRENT XP" else "कुल XP", fontSize = 10.sp, color = accent, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
-                    Text(totalXp.toString(), fontSize = 32.sp, fontWeight = FontWeight.Black, color = GhostWhite)
+                    Text(if (lang == Lang.EN) "CURRENT XP" else "कुल XP", fontSize = 9.sp, color = accent, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                    Text(totalXp.toString(), fontSize = 24.sp, fontWeight = FontWeight.Black, color = GhostWhite)
                 }
                 Box(
-                    modifier = Modifier.size(60.dp).clip(CircleShape).background(accent.copy(alpha = 0.1f)).border(1.dp, accent.copy(alpha = 0.2f), CircleShape),
+                    modifier = Modifier.size(44.dp).clip(CircleShape).background(accent.copy(alpha = 0.1f)),
                     contentAlignment = Alignment.Center
                 ) {
-                    StarIcon(accent, Modifier.size(30.dp))
+                    StarIcon(accent, Modifier.size(24.dp))
                 }
             }
         }
@@ -1829,6 +1941,123 @@ fun ExportDetailScreen(
             colors = ButtonDefaults.buttonColors(containerColor = accent, contentColor = DeepSpace)
         ) {
             Text(if (lang == Lang.EN) "SHARE / EXPORT" else "शेयर / एक्सपोर्ट", fontWeight = FontWeight.ExtraBold)
+        }
+    }
+}
+
+@Composable
+fun RankingsScreen(
+    totalXp: Int,
+    lang: Lang,
+    accent: Color,
+    txtCol: Color,
+    onBack: () -> Unit
+) {
+    val currentRank = Rank.fromXp(totalXp)
+    val nextRank = Rank.entries.getOrNull(currentRank.ordinal + 1)
+    val xpNeeded = nextRank?.let { it.threshold - totalXp } ?: 0
+
+    Column(
+        modifier = Modifier.fillMaxSize().padding(24.dp)
+    ) {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            IconButton(onClick = onBack) { BackIcon(color = txtCol) }
+            Text(if (lang == Lang.EN) "RANKING PROTOCOL" else "रैंकिंग प्रोटोकॉल", fontSize = 20.sp, fontWeight = FontWeight.Black, color = txtCol, letterSpacing = 2.sp)
+        }
+
+        Spacer(Modifier.height(32.dp))
+
+        // Current Status Card
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(24.dp),
+            color = accent.copy(alpha = 0.1f),
+            border = BorderStroke(1.dp, accent.copy(alpha = 0.3f))
+        ) {
+            Column(Modifier.padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(currentRank.icon, fontSize = 48.sp)
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    (if (lang == Lang.EN) "CURRENT RANK: " else "वर्तमान रैंक: ") + currentRank.label.uppercase(),
+                    color = GhostWhite,
+                    fontWeight = FontWeight.Black,
+                    fontSize = 18.sp
+                )
+                Spacer(Modifier.height(16.dp))
+                if (nextRank != null) {
+                    Text(
+                        (if (lang == Lang.EN) "NEXT RANK: " else "अगली रैंक: ") + nextRank.label.uppercase(),
+                        color = accent,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 12.sp
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        (if (lang == Lang.EN) "$xpNeeded MORE XP NEEDED" else "$xpNeeded और XP चाहिए"),
+                        color = GhostWhite.copy(alpha = 0.6f),
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                } else {
+                    Text(
+                        if (lang == Lang.EN) "MAX RANK ACHIEVED" else "अधिकतम रैंक प्राप्त की",
+                        color = BioLime,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 12.sp
+                    )
+                }
+            }
+        }
+
+        Spacer(Modifier.height(32.dp))
+
+        Text(
+            if (lang == Lang.EN) "RANK THRESHOLDS" else "रैंक थ्रेशोल्ड",
+            color = accent,
+            fontSize = 12.sp,
+            fontWeight = FontWeight.Bold,
+            letterSpacing = 2.sp
+        )
+
+        Spacer(Modifier.height(16.dp))
+
+        LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            items(Rank.entries) { rank ->
+                val isUnlocked = totalXp >= rank.threshold
+                val isCurrent = rank == currentRank
+                
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp),
+                    color = if (isCurrent) accent.copy(alpha = 0.05f) else CardBg,
+                    border = BorderStroke(1.dp, if (isCurrent) accent.copy(alpha = 0.3f) else if (isUnlocked) GhostWhite.copy(alpha = 0.1f) else GhostWhite.copy(alpha = 0.02f))
+                ) {
+                    Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Text(rank.icon, fontSize = 24.sp, modifier = Modifier.alpha(if (isUnlocked) 1f else 0.3f))
+                        Spacer(Modifier.width(16.dp))
+                        Column {
+                            Text(
+                                rank.label.uppercase(),
+                                color = if (isUnlocked) GhostWhite else GhostWhite.copy(alpha = 0.3f),
+                                fontWeight = FontWeight.Black,
+                                fontSize = 14.sp
+                            )
+                            Text(
+                                "${rank.threshold} XP",
+                                color = if (isUnlocked) accent else GhostWhite.copy(alpha = 0.1f),
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                        Spacer(Modifier.weight(1f))
+                        if (isCurrent) {
+                            Text("CURRENT", color = accent, fontSize = 10.sp, fontWeight = FontWeight.Black)
+                        } else if (!isUnlocked) {
+                            Text("LOCKED", color = GhostWhite.copy(alpha = 0.1f), fontSize = 10.sp, fontWeight = FontWeight.Black)
+                        }
+                    }
+                }
+            }
         }
     }
 }
