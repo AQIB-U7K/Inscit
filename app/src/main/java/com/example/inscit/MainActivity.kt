@@ -263,27 +263,33 @@ class TTSManager(context: Context) : TextToSpeech.OnInitListener {
 
 fun getExportFolder(context: Context): File {
     val folder = File(context.getExternalFilesDir(null), "InscitExports")
-    if (!folder.exists()) folder.mkdirs()
-    return folder
+    if (!folder.exists()) {
+        folder.mkdirs()
+    }
+    return folder.canonicalFile
 }
 
 fun shareFile(context: Context, file: File) {
     try {
+        val canonicalFile = file.canonicalFile
+        val authority = "com.example.inscit.fileprovider"
         val uri = FileProvider.getUriForFile(
             context,
-            "${context.packageName}.fileprovider",
-            file
+            authority,
+            canonicalFile
         )
         val intent = Intent(Intent.ACTION_SEND).apply {
             type = "text/plain"
             putExtra(Intent.EXTRA_STREAM, uri)
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
             clipData = ClipData.newRawUri("", uri)
         }
         val chooser = Intent.createChooser(intent, "Share Export")
         chooser.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         context.startActivity(chooser)
     } catch (e: Exception) {
+        e.printStackTrace()
         Toast.makeText(context, "Sharing failed: ${e.message}", Toast.LENGTH_SHORT).show()
     }
 }
