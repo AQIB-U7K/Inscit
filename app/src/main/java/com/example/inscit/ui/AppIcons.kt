@@ -422,3 +422,14 @@ fun PersonIcon(color: Color, modifier: Modifier = Modifier.size(60.dp)) {
         drawPath(path, color, style = Stroke(width = 2.dp.toPx(), cap = StrokeCap.Round))
     }
 }
+
+@Composable
+fun MenuIcon(color: Color = Color.White, modifier: Modifier = Modifier.size(24.dp)) {
+    Canvas(modifier = modifier) {
+        val w = size.width
+        val h = size.height
+        drawLine(color, Offset(w * 0.2f, h * 0.3f), Offset(w * 0.8f, h * 0.3f), strokeWidth = 2.dp.toPx(), cap = StrokeCap.Round)
+        drawLine(color, Offset(w * 0.2f, h * 0.5f), Offset(w * 0.8f, h * 0.5f), strokeWidth = 2.dp.toPx(), cap = StrokeCap.Round)
+        drawLine(color, Offset(w * 0.2f, h * 0.7f), Offset(w * 0.8f, h * 0.7f), strokeWidth = 2.dp.toPx(), cap = StrokeCap.Round)
+    }
+}

@@ -133,9 +133,27 @@ import androidx.compose.ui.text.TextStyle
 import java.io.File
 import java.io.FileOutputStream
 import java.util.Locale
+import androidx.compose.material3.ModalNavigationDrawer
+import androidx.compose.material3.DrawerValue
+import androidx.compose.material3.rememberDrawerState
+import androidx.compose.material3.ModalDrawerSheet
+import androidx.compose.material3.NavigationDrawerItem
+import androidx.compose.material3.NavigationDrawerItemDefaults
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.font.FontFamily
+import com.example.inscit.ui.MenuIcon
+import java.text.SimpleDateFormat
+import java.util.Date
+import kotlin.math.cos
+import kotlin.math.sin
+import com.example.inscit.ui.LeaderboardScreen
+import kotlinx.coroutines.launch
 
-enum class Screen { SPLASH, HOME, LAB, QUIZ, NOTES, THEME_CONFIG, NOTES_FOLDER, PROFILE, TOPIC_SELECTION, TOPIC_DETAIL, EXPORTS_LIST, EXPORT_DETAIL, RANKINGS }
+enum class Screen {
+ SPLASH, HOME, LAB, QUIZ, NOTES, THEME_CONFIG, NOTES_FOLDER, PROFILE, TOPIC_SELECTION, TOPIC_DETAIL, EXPORTS_LIST, EXPORT_DETAIL, RANKINGS, ABOUT_US, CONTACT_US, DONATE, LEADERBOARD, FEEDBACK, ACHIEVEMENTS, DAILY_QUIZ, NEWS_UPDATES, HELP_CENTER }
 enum class Branch { PHYSICS, CHEMISTRY, BIOLOGY }
+
 
 val DeepSpace = Color(0xFF020408)
 val NeonCyan = Color(0xFF00F2FF)
@@ -182,12 +200,7 @@ private const val KEY_USER_DATA = "user_data"
 
 fun saveUserDocument(context: Context, userDoc: UserDocument) {
     val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-    val notesStr = userDoc.userNotes.entries.joinToString("|||") { (k, v) -> 
-        val content = v.content.replace(":", "\\:").replace(";", "\\;").replace("~", "\\~").replace("|", "\\|")
-        val drawing = v.drawingData.replace(":", "\\:").replace(";", "\\;").replace("~", "\\~").replace("|", "\\|")
-        "$k~~~$content~~~$drawing"
-    }
-    val data = "${userDoc.profile.name}|${userDoc.profile.photoUrl ?: ""}|${userDoc.stats.xp}|${userDoc.stats.level}|${userDoc.stats.quizzesTaken}|${userDoc.quizProgress.lastScore}|${userDoc.settings.language.name}|${userDoc.settings.theme.name}|$notesStr"
+    val data = serializeUserDocument(userDoc)
     prefs.edit().putString(KEY_USER_DATA, data).apply()
 }
 
@@ -209,28 +222,8 @@ fun saveProfileImageLocally(context: Context, uri: Uri): String? {
 fun loadUserDocument(context: Context): UserDocument {
     val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
     val data = prefs.getString(KEY_USER_DATA, null) ?: return UserDocument(profile = UserProfile(name = "Core Explorer"))
-    val parts = data.split("|")
     return try {
-        val notesStr = if (parts.size > 8) parts[8] else ""
-        val notes = if (notesStr.isEmpty()) emptyMap() else {
-            notesStr.split("|||").associate { 
-                val noteParts = it.split("~~~")
-                val k = noteParts[0]
-                val content = if (noteParts.size > 1) noteParts[1].replace("\\:", ":").replace("\\;", ";").replace("\\~", "~").replace("\\|", "|") else ""
-                val drawing = if (noteParts.size > 2) noteParts[2].replace("\\:", ":").replace("\\;", ";").replace("\\~", "~").replace("\\|", "|") else ""
-                k to UserNote(content, drawing)
-            }
-        }
-        UserDocument(
-            profile = UserProfile(name = parts[0], photoUrl = parts[1].takeIf { it.isNotEmpty() }),
-            stats = UserStats(xp = parts[2].toInt(), level = parts[3].toInt(), quizzesTaken = parts[4].toInt()),
-            quizProgress = QuizProgress(lastScore = parts[5].toFloat()),
-            settings = UserSettings(
-                language = if (parts.size > 6) Lang.valueOf(parts[6]) else Lang.EN,
-                theme = if (parts.size > 7) ThemeMode.valueOf(parts[7]) else ThemeMode.NEON
-            ),
-            userNotes = notes
-        )
+        UserDocumentSaver.restore(data) ?: UserDocument(profile = UserProfile(name = "Core Explorer"))
     } catch (e: Exception) {
         UserDocument(profile = UserProfile(name = "Core Explorer"))
     }
@@ -303,7 +296,7 @@ fun saveToTextFile(context: Context, userDoc: UserDocument) {
         Total XP: ${userDoc.stats.xp}
         Quizzes Taken: ${userDoc.stats.quizzesTaken}
         Last Score: ${userDoc.quizProgress.lastScore}%
-        Joined: ${java.text.SimpleDateFormat("dd/MM/yyyy HH:mm").format(java.util.Date(userDoc.profile.createdAt))}
+        Joined: ${SimpleDateFormat("dd/MM/yyyy HH:mm").format(Date(userDoc.profile.createdAt))}
         
         STRENGTHS:
         ${userDoc.quizProgress.strengths.joinToString("\n")}
@@ -311,7 +304,7 @@ fun saveToTextFile(context: Context, userDoc: UserDocument) {
         WEAKNESSES:
         ${userDoc.quizProgress.weaknesses.joinToString("\n")}
     """.trimIndent()
-    
+
     try {
         val folder = getExportFolder(context)
         val fileName = "inscit_profile_${System.currentTimeMillis()}.txt"
@@ -334,10 +327,10 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         ttsManager = TTSManager(this)
-        
+
         checkNotificationPermission()
         NotificationScheduler.scheduleInactivityNotification(this)
-        
+
         setContent { AppEngine(ttsManager) }
     }
 
@@ -356,22 +349,25 @@ class MainActivity : ComponentActivity() {
 }
 
 
+// Custom helper to serialize UserDocument for persistence
+fun serializeUserDocument(doc: UserDocument): String {
+    val notesStr = doc.userNotes.entries.joinToString("|||") { (k, v) ->
+        val content = v.content.replace(":", "\\:").replace(";", "\\;").replace("~", "\\~").replace("|", "\\|")
+        val drawing = v.drawingData.replace(":", "\\:").replace(";", "\\;").replace("~", "\\~").replace("|", "\\|")
+        "$k~~~$content~~~$drawing"
+    }
+    return "${doc.profile.name}|${doc.profile.photoUrl ?: ""}|${doc.stats.xp}|${doc.stats.level}|${doc.stats.quizzesTaken}|${doc.quizProgress.lastScore}|${doc.settings.language.name}|${doc.settings.theme.name}|$notesStr"
+}
+
 // Custom Saver for UserDocument to ensure perfect persistence
 val UserDocumentSaver = Saver<UserDocument, String>(
-    save = { doc ->
-        val notesStr = doc.userNotes.entries.joinToString("|||") { (k, v) -> 
-            val content = v.content.replace(":", "\\:").replace(";", "\\;").replace("~", "\\~").replace("|", "\\|")
-            val drawing = v.drawingData.replace(":", "\\:").replace(";", "\\;").replace("~", "\\~").replace("|", "\\|")
-            "$k~~~$content~~~$drawing"
-        }
-        "${doc.profile.name}|${doc.profile.photoUrl ?: ""}|${doc.stats.xp}|${doc.stats.level}|${doc.stats.quizzesTaken}|${doc.quizProgress.lastScore}|${doc.settings.language.name}|${doc.settings.theme.name}|$notesStr"
-    },
+    save = { doc -> serializeUserDocument(doc) },
     restore = { data ->
         val parts = data.split("|")
         try {
             val notesStr = if (parts.size > 8) parts[8] else ""
             val notes = if (notesStr.isEmpty()) emptyMap() else {
-                notesStr.split("|||").associate { 
+                notesStr.split("|||").associate {
                     val noteParts = it.split("~~~")
                     val k = noteParts[0]
                     val content = if (noteParts.size > 1) noteParts[1].replace("\\:", ":").replace("\\;", ";").replace("\\~", "~").replace("\\|", "|") else ""
@@ -402,19 +398,22 @@ fun AppEngine(tts: TTSManager) {
 
     // Local user state with robust persistence and rememberSaveable
     var userDocument by rememberSaveable(
-        saver = Saver(
-            save = { with(UserDocumentSaver) { save(it.value) } },
-            restore = { mutableStateOf(with(UserDocumentSaver) { restore(it)!! }) }
+        saver = Saver<MutableState<UserDocument>, String>(
+            save = { state -> with(UserDocumentSaver) { save(state.value) } },
+            restore = { value -> UserDocumentSaver.restore(value)?.let { mutableStateOf(it) } }
         )
-    ) { 
-        mutableStateOf(loadUserDocument(context)) 
+    ) {
+        mutableStateOf(loadUserDocument(context))
     }
 
     var currentScreen by rememberSaveable { mutableStateOf(Screen.SPLASH) }
     var selectedBranch by rememberSaveable { mutableStateOf(Branch.PHYSICS) }
     var selectedTopic by remember { mutableStateOf<TopicDetail?>(null) }
     var selectedExportFile by remember { mutableStateOf<File?>(null) }
-    
+
+    val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
+    val scope = rememberCoroutineScope()
+
     // Derived state from userDocument
     val language = userDocument.settings.language
     val themeMode = userDocument.settings.theme
@@ -424,29 +423,35 @@ fun AppEngine(tts: TTSManager) {
         saveUserDocument(context, userDocument)
     }
 
-    BackHandler(enabled = currentScreen != Screen.HOME && currentScreen != Screen.SPLASH) {
-        when (currentScreen) {
-            Screen.TOPIC_SELECTION -> currentScreen = Screen.HOME
-            Screen.TOPIC_DETAIL -> currentScreen = Screen.TOPIC_SELECTION
-            Screen.THEME_CONFIG -> currentScreen = Screen.HOME
-            Screen.NOTES_FOLDER -> currentScreen = Screen.THEME_CONFIG
-            Screen.RANKINGS -> currentScreen = Screen.HOME
-            Screen.LAB -> {
-                tts.stop()
-                currentScreen = Screen.HOME
+    val isDrawerOpen = drawerState.isOpen
+    BackHandler(enabled = isDrawerOpen || (currentScreen != Screen.HOME && currentScreen != Screen.SPLASH)) {
+        if (isDrawerOpen) {
+            scope.launch { drawerState.close() }
+        } else {
+            when (currentScreen) {
+                Screen.TOPIC_SELECTION -> currentScreen = Screen.HOME
+                Screen.TOPIC_DETAIL -> currentScreen = Screen.TOPIC_SELECTION
+                Screen.THEME_CONFIG -> currentScreen = Screen.HOME
+                Screen.NOTES_FOLDER -> currentScreen = Screen.THEME_CONFIG
+                Screen.RANKINGS -> currentScreen = Screen.HOME
+                Screen.LAB -> {
+                    tts.stop()
+                    currentScreen = Screen.HOME
+                }
+                Screen.NOTES -> {
+                    tts.stop()
+                    currentScreen = Screen.LAB
+                }
+                Screen.QUIZ -> {
+                    tts.stop()
+                    currentScreen = Screen.HOME
+                }
+                Screen.PROFILE -> currentScreen = Screen.HOME
+                Screen.EXPORTS_LIST -> currentScreen = Screen.PROFILE
+                Screen.EXPORT_DETAIL -> currentScreen = Screen.EXPORTS_LIST
+                Screen.ABOUT_US, Screen.CONTACT_US, Screen.DONATE -> currentScreen = Screen.HOME
+                else -> {}
             }
-            Screen.NOTES -> {
-                tts.stop()
-                currentScreen = Screen.LAB
-            }
-            Screen.QUIZ -> {
-                tts.stop()
-                currentScreen = Screen.HOME
-            }
-            Screen.PROFILE -> currentScreen = Screen.HOME
-            Screen.EXPORTS_LIST -> currentScreen = Screen.PROFILE
-            Screen.EXPORT_DETAIL -> currentScreen = Screen.EXPORTS_LIST
-            else -> {}
         }
     }
 
@@ -463,211 +468,522 @@ fun AppEngine(tts: TTSManager) {
     val textColor = if (themeMode == ThemeMode.NOBLE && !isDark) Color(0xFF1A1A1A) else GhostWhite
 
     MaterialTheme {
-        Surface(modifier = Modifier.fillMaxSize(), color = appBg) {
-            Crossfade(targetState = currentScreen, animationSpec = tween(600), label = "screen_crossfade") { target ->
-                when (target) {
-                    Screen.SPLASH -> FullSplashScreen(primaryAccent) {
-                        triggerVibration(context, "CLICK")
-                        currentScreen = Screen.HOME
-                    }
-                    Screen.HOME -> {
-                        ModernHome(
-                            lang = language,
-                            theme = themeMode,
-                            txtCol = textColor,
-                            accent = primaryAccent,
-                            totalXp = userDocument.stats.xp,
-                            userName = userDocument.profile.name,
-                            photoUrl = userDocument.profile.photoUrl?.let { Uri.parse(it) },
-                            onLangChange = { newLang ->
-                                userDocument = userDocument.copy(settings = userDocument.settings.copy(language = newLang))
-                            },
-                            onNav = { branch ->
-                                triggerVibration(context, "CLICK")
-                                selectedBranch = branch
-                                currentScreen = Screen.TOPIC_SELECTION
-                            },
-                            onQuiz = {
-                                triggerVibration(context, "SUCCESS")
-                                currentScreen = Screen.QUIZ
-                            },
-                            onTheme = {
-                                triggerVibration(context, "CLICK")
-                                currentScreen = Screen.THEME_CONFIG
-                            },
-                            onProfile = {
-                                triggerVibration(context, "CLICK")
-                                currentScreen = Screen.PROFILE
-                            },
-                            onXpClick = {
-                                triggerVibration(context, "CLICK")
-                                currentScreen = Screen.RANKINGS
-                            }
-                        )
-                    }
-                    Screen.RANKINGS -> RankingsScreen(
-                        totalXp = userDocument.stats.xp,
-                        lang = language,
-                        accent = primaryAccent,
-                        txtCol = textColor,
-                        onBack = { currentScreen = Screen.HOME }
-                    )
-                    Screen.TOPIC_SELECTION -> TopicSelectionScreen(
-                        branch = selectedBranch,
-                        lang = language,
-                        tts = tts,
-                        accent = primaryAccent,
-                        txtCol = textColor,
-                        onBack = { currentScreen = Screen.HOME },
-                        onTopicClick = { topic ->
-                            selectedTopic = topic
-                            currentScreen = Screen.TOPIC_DETAIL
+        ModalNavigationDrawer(
+            drawerState = drawerState,
+            drawerContent = {
+                DrawerContent(
+                    currentScreen = currentScreen,
+                    onNavigate = { screen ->
+                        currentScreen = screen
+                        scope.launch { drawerState.close() }
+                    },
+                    lang = language,
+                    accent = primaryAccent,
+                    userName = userDocument.profile.name,
+                    totalXp = userDocument.stats.xp
+                )
+            },
+            gesturesEnabled = currentScreen == Screen.HOME
+        ) {
+            Surface(modifier = Modifier.fillMaxSize(), color = appBg) {
+                Crossfade(targetState = currentScreen, animationSpec = tween(600), label = "screen_crossfade") { target ->
+                    when (target) {
+                        Screen.SPLASH -> FullSplashScreen(primaryAccent) {
+                            triggerVibration(context, "CLICK")
+                            currentScreen = Screen.HOME
                         }
-                    )
-                    Screen.TOPIC_DETAIL -> selectedTopic?.let { topic ->
-                        TopicDetailScreen(
-                            topic = topic,
+                        Screen.HOME -> {
+                            ModernHome(
+                                lang = language,
+                                theme = themeMode,
+                                txtCol = textColor,
+                                accent = primaryAccent,
+                                totalXp = userDocument.stats.xp,
+                                userName = userDocument.profile.name,
+                                photoUrl = userDocument.profile.photoUrl?.let { Uri.parse(it) },
+                                onLangChange = { newLang ->
+                                    userDocument = userDocument.copy(settings = userDocument.settings.copy(language = newLang))
+                                },
+                                onNav = { branch ->
+                                    triggerVibration(context, "CLICK")
+                                    selectedBranch = branch
+                                    currentScreen = Screen.TOPIC_SELECTION
+                                },
+                                onQuiz = {
+                                    triggerVibration(context, "SUCCESS")
+                                    currentScreen = Screen.QUIZ
+                                },
+                                onTheme = {
+                                    triggerVibration(context, "CLICK")
+                                    currentScreen = Screen.THEME_CONFIG
+                                },
+                                onProfile = {
+                                    triggerVibration(context, "CLICK")
+                                    currentScreen = Screen.PROFILE
+                                },
+                                onXpClick = {
+                                    triggerVibration(context, "CLICK")
+                                    currentScreen = Screen.RANKINGS
+                                },
+                                onMenuClick = {
+                                    scope.launch { drawerState.open() }
+                                }
+                            )
+                        }
+                        Screen.RANKINGS -> RankingsScreen(
+                            totalXp = userDocument.stats.xp,
+                            lang = language,
+                            accent = primaryAccent,
+                            txtCol = textColor,
+                            onBack = { currentScreen = Screen.HOME }
+                        )
+                        Screen.ABOUT_US -> AboutUsScreen(primaryAccent, textColor, language) { currentScreen = Screen.HOME }
+                        Screen.CONTACT_US -> ContactUsScreen(primaryAccent, textColor, language) { currentScreen = Screen.HOME }
+                        Screen.DONATE -> DonateScreen(primaryAccent, textColor, language) { currentScreen = Screen.HOME }
+                        Screen.TOPIC_SELECTION -> TopicSelectionScreen(
+                            branch = selectedBranch,
                             lang = language,
                             tts = tts,
                             accent = primaryAccent,
                             txtCol = textColor,
-                            userNote = userDocument.userNotes[topic.id] ?: UserNote(),
-                            onNoteChange = { updatedNote ->
-                                val updatedNotes = userDocument.userNotes.toMutableMap()
-                                updatedNotes[topic.id] = updatedNote
-                                userDocument = userDocument.copy(userNotes = updatedNotes)
-                            },
-                            onBack = { currentScreen = Screen.TOPIC_SELECTION },
-                            onLabClick = { currentScreen = Screen.LAB }
-                        )
-                    }
-                    Screen.THEME_CONFIG -> ThemeSelectionScreen(
-                        current = themeMode,
-                        lang = language,
-                        accent = primaryAccent,
-                        txtCol = textColor,
-                        onToggle = { newTheme ->
-                            userDocument = userDocument.copy(settings = userDocument.settings.copy(theme = newTheme))
-                        },
-                        onLangToggle = { newLang ->
-                            userDocument = userDocument.copy(settings = userDocument.settings.copy(language = newLang))
-                        },
-                        onOpenFolder = { currentScreen = Screen.NOTES_FOLDER },
-                        onViewNote = { branch ->
-                            selectedBranch = branch
-                            currentScreen = Screen.NOTES
-                        },
-                        onBack = { currentScreen = Screen.HOME }
-                    )
-                    Screen.NOTES_FOLDER -> NotesFolderScreen(
-                        lang = language,
-                        accent = primaryAccent,
-                        txtCol = textColor,
-                        onBack = { currentScreen = Screen.THEME_CONFIG },
-                        onOpenNote = { branch, lang ->
-                            selectedBranch = branch
-                            userDocument = userDocument.copy(settings = userDocument.settings.copy(language = lang))
-                            currentScreen = Screen.NOTES
-                        }
-                    )
-                    Screen.LAB -> LabScreen(
-                        branch = selectedBranch,
-                        lang = language,
-                        tts = tts,
-                        accent = primaryAccent,
-                        txtCol = textColor,
-                        onBack = {
-                            tts.stop()
-                            currentScreen = Screen.HOME
-                        },
-                        onNotes = { currentScreen = Screen.NOTES }
-                    )
-                    Screen.NOTES -> NotesScreen(
-                        branch = selectedBranch,
-                        lang = language,
-                        tts = tts,
-                        accent = primaryAccent,
-                        txtCol = textColor,
-                        userNote = (userDocument.userNotes[selectedBranch.name] ?: UserNote()) as UserNote,
-                        onNoteChange = { newNote ->
-                            val updatedNotes = userDocument.userNotes.toMutableMap()
-                            updatedNotes[selectedBranch.name] = newNote
-                            userDocument = userDocument.copy(userNotes = updatedNotes)
-                        },
-                        onBack = { 
-                            tts.stop()
-                            currentScreen = Screen.LAB 
-                        },
-                        onSave = {
-                            saveUserDocument(context, userDocument)
-                            Toast.makeText(context, "Note Saved", Toast.LENGTH_SHORT).show()
-                        }
-                    )
-                    Screen.QUIZ -> {
-                        ScienceQuizScreen(
-                            lang = language,
-                            accent = primaryAccent,
-                            onFinish = { xpEarned, score, strengths, weaknesses ->
-                                tts.stop()
-                                val newXp = userDocument.stats.xp + xpEarned
-                                val newStats = userDocument.stats.copy(
-                                    xp = newXp,
-                                    level = (newXp / 100) + 1,
-                                    quizzesTaken = userDocument.stats.quizzesTaken + 1
-                                )
-                                val newProgress = userDocument.quizProgress.copy(
-                                    lastScore = score.toFloat(),
-                                    strengths = strengths,
-                                    weaknesses = weaknesses
-                                )
-                                userDocument = userDocument.copy(stats = newStats, quizProgress = newProgress)
-                                NotificationScheduler.scheduleInactivityNotification(context)
-                                currentScreen = Screen.HOME
+                            onBack = { currentScreen = Screen.HOME },
+                            onTopicClick = { topic ->
+                                selectedTopic = topic
+                                currentScreen = Screen.TOPIC_DETAIL
                             }
                         )
-                    }
-                    Screen.PROFILE -> {
-                        LocalProfileView(
-                            userDoc = userDocument,
+                        Screen.TOPIC_DETAIL -> selectedTopic?.let { topic ->
+                            TopicDetailScreen(
+                                topic = topic,
+                                lang = language,
+                                tts = tts,
+                                accent = primaryAccent,
+                                txtCol = textColor,
+                                userNote = userDocument.userNotes[topic.id] ?: UserNote(),
+                                onNoteChange = { updatedNote ->
+                                    val updatedNotes = userDocument.userNotes.toMutableMap()
+                                    updatedNotes[topic.id] = updatedNote
+                                    userDocument = userDocument.copy(userNotes = updatedNotes)
+                                },
+                                onBack = { currentScreen = Screen.TOPIC_SELECTION },
+                                onLabClick = { currentScreen = Screen.LAB }
+                            )
+                        }
+                        Screen.THEME_CONFIG -> ThemeSelectionScreen(
+                            current = themeMode,
+                            lang = language,
                             accent = primaryAccent,
-                            onUpdateProfile = { updated ->
-                                userDocument = updated
+                            txtCol = textColor,
+                            onToggle = { newTheme ->
+                                userDocument = userDocument.copy(settings = userDocument.settings.copy(theme = newTheme))
                             },
-                            onSaveProgress = {
-                                saveToTextFile(context, userDocument)
+                            onLangToggle = { newLang ->
+                                userDocument = userDocument.copy(settings = userDocument.settings.copy(language = newLang))
                             },
-                            onViewExports = {
-                                currentScreen = Screen.EXPORTS_LIST
+                            onOpenFolder = { currentScreen = Screen.NOTES_FOLDER },
+                            onViewNote = { branch ->
+                                selectedBranch = branch
+                                currentScreen = Screen.NOTES
                             },
                             onBack = { currentScreen = Screen.HOME }
                         )
-                    }
-                    Screen.EXPORTS_LIST -> {
-                        ExportListScreen(
+                        Screen.NOTES_FOLDER -> NotesFolderScreen(
+                            lang = language,
                             accent = primaryAccent,
                             txtCol = textColor,
-                            lang = language,
-                            onBack = { currentScreen = Screen.PROFILE },
-                            onFileClick = { file ->
-                                selectedExportFile = file
-                                currentScreen = Screen.EXPORT_DETAIL
+                            onBack = { currentScreen = Screen.THEME_CONFIG },
+                            onOpenNote = { branch, lang ->
+                                selectedBranch = branch
+                                userDocument = userDocument.copy(settings = userDocument.settings.copy(language = lang))
+                                currentScreen = Screen.NOTES
                             }
                         )
-                    }
-                    Screen.EXPORT_DETAIL -> {
-                        selectedExportFile?.let { file ->
-                            ExportDetailScreen(
-                                file = file,
+                        Screen.LAB -> LabScreen(
+                            branch = selectedBranch,
+                            lang = language,
+                            tts = tts,
+                            accent = primaryAccent,
+                            txtCol = textColor,
+                            onBack = {
+                                tts.stop()
+                                currentScreen = Screen.HOME
+                            },
+                            onNotes = { currentScreen = Screen.NOTES }
+                        )
+                        Screen.NOTES -> NotesScreen(
+                            branch = selectedBranch,
+                            lang = language,
+                            tts = tts,
+                            accent = primaryAccent,
+                            txtCol = textColor,
+                            userNote = (userDocument.userNotes[selectedBranch.name] ?: UserNote()) as UserNote,
+                            onNoteChange = { newNote ->
+                                val updatedNotes = userDocument.userNotes.toMutableMap()
+                                updatedNotes[selectedBranch.name] = newNote
+                                userDocument = userDocument.copy(userNotes = updatedNotes)
+                            },
+                            onBack = {
+                                tts.stop()
+                                currentScreen = Screen.LAB
+                            },
+                            onSave = {
+                                saveUserDocument(context, userDocument)
+                                Toast.makeText(context, "Note Saved", Toast.LENGTH_SHORT).show()
+                            }
+                        )
+                        Screen.QUIZ -> {
+                            ScienceQuizScreen(
+                                lang = language,
+                                accent = primaryAccent,
+                                onFinish = { xpEarned, score, strengths, weaknesses ->
+                                    tts.stop()
+                                    val newXp = userDocument.stats.xp + xpEarned
+                                    val newStats = userDocument.stats.copy(
+                                        xp = newXp,
+                                        level = (newXp / 100) + 1,
+                                        quizzesTaken = userDocument.stats.quizzesTaken + 1
+                                    )
+                                    val newProgress = userDocument.quizProgress.copy(
+                                        lastScore = score.toFloat(),
+                                        strengths = strengths,
+                                        weaknesses = weaknesses
+                                    )
+                                    userDocument = userDocument.copy(stats = newStats, quizProgress = newProgress)
+                                    NotificationScheduler.scheduleInactivityNotification(context)
+                                    currentScreen = Screen.HOME
+                                }
+                            )
+                        }
+                        Screen.PROFILE -> {
+                            LocalProfileView(
+                                userDoc = userDocument,
+                                accent = primaryAccent,
+                                onUpdateProfile = { updated ->
+                                    userDocument = updated
+                                },
+                                onSaveProgress = {
+                                    saveToTextFile(context, userDocument)
+                                },
+                                onViewExports = {
+                                    currentScreen = Screen.EXPORTS_LIST
+                                },
+                                onBack = { currentScreen = Screen.HOME }
+                            )
+                        }
+                        Screen.EXPORTS_LIST -> {
+                            ExportListScreen(
                                 accent = primaryAccent,
                                 txtCol = textColor,
                                 lang = language,
-                                onBack = { currentScreen = Screen.EXPORTS_LIST }
+                                onBack = { currentScreen = Screen.PROFILE },
+                                onFileClick = { file ->
+                                    selectedExportFile = file
+                                    currentScreen = Screen.EXPORT_DETAIL
+                                }
                             )
                         }
-                    }
+                        Screen.EXPORT_DETAIL -> {
+                            selectedExportFile?.let { file ->
+                                ExportDetailScreen(
+                                    file = file,
+                                    accent = primaryAccent,
+                                    txtCol = textColor,
+                                    lang = language,
+                                    onBack = { currentScreen = Screen.EXPORTS_LIST }
+                                )
+                            }
+                        }
+                        Screen.LEADERBOARD -> LeaderboardScreen(onBack = { currentScreen = Screen.HOME })
+                        Screen.FEEDBACK -> FeedbackScreen(primaryAccent, textColor, language) { currentScreen = Screen.HOME }
+                        Screen.ACHIEVEMENTS -> AchievementsScreen(primaryAccent, textColor, language, userDocument.stats.xp) { currentScreen = Screen.HOME }
+                        Screen.DAILY_QUIZ -> DailyQuizScreen(primaryAccent, textColor, language) { currentScreen = Screen.HOME }
+                        Screen.NEWS_UPDATES -> NewsUpdatesScreen(primaryAccent, textColor, language) { currentScreen = Screen.HOME }
+                        Screen.HELP_CENTER -> HelpCenterScreen(primaryAccent, textColor, language) { currentScreen = Screen.HOME }
 
+                        else -> {
+
+                        }
+                    }
                 }
             }
+        }
+    }
+}
+
+@Composable
+fun DrawerContent(
+    currentScreen: Screen,
+    onNavigate: (Screen) -> Unit,
+    lang: Lang,
+    accent: Color,
+    userName: String,
+    totalXp: Int
+) {
+    ModalDrawerSheet(
+        drawerContainerColor = DeepSpace,
+        drawerContentColor = GhostWhite,
+        modifier = Modifier.width(300.dp),
+        windowInsets = androidx.compose.foundation.layout.WindowInsets(0.dp)
+    ) {
+        Column(Modifier.fillMaxSize().padding(24.dp).verticalScroll(rememberScrollState())) {
+            // Header
+            Text("INSCIT OMEGA", fontSize = 24.sp, fontWeight = FontWeight.Black, color = accent, letterSpacing = 2.sp)
+            Spacer(Modifier.height(8.dp))
+            Text(userName, color = GhostWhite, fontWeight = FontWeight.Bold)
+            Text("XP: $totalXp", color = accent, fontSize = 12.sp)
+
+            Spacer(Modifier.height(40.dp))
+
+            DrawerItem("MENU", Screen.HOME, currentScreen, onNavigate, accent)
+            DrawerItem(if (lang == Lang.EN) "LEADERBOARD" else "लीडरबोर्ड", Screen.LEADERBOARD, currentScreen, onNavigate, accent)
+            DrawerItem(if (lang == Lang.EN) "MY RANKS" else "मेरी रैंक", Screen.RANKINGS, currentScreen, onNavigate, accent)
+            DrawerItem(if (lang == Lang.EN) "ACCOUNT" else "खाता", Screen.PROFILE, currentScreen, onNavigate, accent)
+            DrawerItem(if (lang == Lang.EN) "ACHIEVEMENTS" else "उपलब्धियां", Screen.ACHIEVEMENTS, currentScreen, onNavigate, accent)
+            DrawerItem(if (lang == Lang.EN) "DAILY CHALLENGE" else "दैनिक चुनौती", Screen.DAILY_QUIZ, currentScreen, onNavigate, accent)
+            DrawerItem(if (lang == Lang.EN) "LAB UPDATES" else "लैब अपडेट", Screen.NEWS_UPDATES, currentScreen, onNavigate, accent)
+            DrawerItem(if (lang == Lang.EN) "FEEDBACK" else "फीडबैक", Screen.FEEDBACK, currentScreen, onNavigate, accent)
+            DrawerItem(if (lang == Lang.EN) "HELP CENTER" else "सहायता केंद्र", Screen.HELP_CENTER, currentScreen, onNavigate, accent)
+
+            Spacer(Modifier.weight(1f))
+            Spacer(Modifier.height(24.dp))
+
+            DrawerItem(if (lang == Lang.EN) "ABOUT US" else "हमारे बारे में", Screen.ABOUT_US, currentScreen, onNavigate, accent)
+            DrawerItem(if (lang == Lang.EN) "CONTACT US" else "संपर्क करें", Screen.CONTACT_US, currentScreen, onNavigate, accent)
+            DrawerItem(if (lang == Lang.EN) "DONATE" else "दान करें", Screen.DONATE, currentScreen, onNavigate, accent)
+
+            Spacer(Modifier.height(16.dp))
+            Text("v9.0.4", color = GhostWhite.copy(alpha = 0.3f), fontSize = 10.sp)
+        }
+    }
+}
+
+@Composable
+fun FeedbackScreen(accent: Color, txtCol: Color, lang: Lang, onBack: () -> Unit) {
+    var feedbackText by remember { mutableStateOf("") }
+    Column(modifier = Modifier.fillMaxSize().padding(24.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            IconButton(onClick = onBack) { BackIcon(txtCol) }
+            Text(if (lang == Lang.EN) "FEEDBACK" else "फीडबैक", fontSize = 20.sp, fontWeight = FontWeight.Black, color = txtCol)
+        }
+        Spacer(Modifier.height(32.dp))
+        Text(if (lang == Lang.EN) "Share your thoughts on how we can improve Inscit." else "Inscit को बेहतर बनाने के बारे में अपने विचार साझा करें।", color = GhostWhite.copy(alpha = 0.7f))
+        Spacer(Modifier.height(16.dp))
+        OutlinedTextField(
+            value = feedbackText,
+            onValueChange = { feedbackText = it },
+            modifier = Modifier.fillMaxWidth().height(200.dp),
+            placeholder = { Text("Write here...") },
+            colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = accent, unfocusedBorderColor = GhostWhite.copy(alpha = 0.1f))
+        )
+        Spacer(Modifier.height(24.dp))
+        Button(
+            onClick = { /* Handle submit */ },
+            modifier = Modifier.fillMaxWidth().height(60.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = accent, contentColor = DeepSpace)
+        ) {
+            Text("SUBMIT FEEDBACK", fontWeight = FontWeight.ExtraBold)
+        }
+    }
+}
+
+@Composable
+fun AchievementsScreen(accent: Color, txtCol: Color, lang: Lang, xp: Int, onBack: () -> Unit) {
+    val badges = listOf(
+        "Novice" to 100,
+        "Scholar" to 500,
+        "Expert" to 1000,
+        "Master" to 2500,
+        "Grandmaster" to 5000,
+        "Universal Core" to 10000
+    )
+    Column(modifier = Modifier.fillMaxSize().padding(24.dp).verticalScroll(rememberScrollState())) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            IconButton(onClick = onBack) { BackIcon(txtCol) }
+            Text(if (lang == Lang.EN) "ACHIEVEMENTS" else "उपलब्धियां", fontSize = 20.sp, fontWeight = FontWeight.Black, color = txtCol)
+        }
+        Spacer(Modifier.height(32.dp))
+        badges.forEach { (name, threshold) ->
+            val isUnlocked = xp >= threshold
+            Surface(
+                modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                color = if (isUnlocked) accent.copy(alpha = 0.1f) else CardBg,
+                shape = RoundedCornerShape(16.dp),
+                border = BorderStroke(1.dp, if (isUnlocked) accent else GhostWhite.copy(alpha = 0.05f))
+            ) {
+                Row(Modifier.padding(20.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text(if (isUnlocked) "🏆" else "🔒", fontSize = 24.sp)
+                    Spacer(Modifier.width(16.dp))
+                    Column {
+                        Text(name, fontWeight = FontWeight.Bold, color = if (isUnlocked) GhostWhite else GhostWhite.copy(alpha = 0.3f))
+                        Text("$threshold XP", fontSize = 12.sp, color = accent)
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun DailyQuizScreen(accent: Color, txtCol: Color, lang: Lang, onBack: () -> Unit) {
+    Column(modifier = Modifier.fillMaxSize().padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+        Text("🎯", fontSize = 64.sp)
+        Spacer(Modifier.height(16.dp))
+        Text(if (lang == Lang.EN) "DAILY CHALLENGE" else "दैनिक चुनौती", fontSize = 24.sp, fontWeight = FontWeight.Black, color = txtCol)
+        Spacer(Modifier.height(8.dp))
+        Text(if (lang == Lang.EN) "Come back tomorrow for a new challenge!" else "नई चुनौती के लिए कल वापस आएं!", color = GhostWhite.copy(alpha = 0.6f))
+        Spacer(Modifier.height(32.dp))
+        Button(onClick = onBack, colors = ButtonDefaults.buttonColors(containerColor = accent)) {
+            Text("RETURN HOME", color = DeepSpace)
+        }
+    }
+}
+
+@Composable
+fun NewsUpdatesScreen(accent: Color, txtCol: Color, lang: Lang, onBack: () -> Unit) {
+    Column(modifier = Modifier.fillMaxSize().padding(24.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            IconButton(onClick = onBack) { BackIcon(txtCol) }
+            Text(if (lang == Lang.EN) "LAB UPDATES" else "लैब अपडेट", fontSize = 20.sp, fontWeight = FontWeight.Black, color = txtCol)
+        }
+        Spacer(Modifier.height(32.dp))
+        repeat(3) { i ->
+            Surface(
+                modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                color = CardBg,
+                shape = RoundedCornerShape(16.dp)
+            ) {
+                Column(Modifier.padding(20.dp)) {
+                    Text("System Update v9.0.$i", fontWeight = FontWeight.Bold, color = accent)
+                    Text("Optimized core simulations and added new syllabus modules.", color = GhostWhite.copy(alpha = 0.7f), fontSize = 14.sp)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun HelpCenterScreen(accent: Color, txtCol: Color, lang: Lang, onBack: () -> Unit) {
+    Column(modifier = Modifier.fillMaxSize().padding(24.dp).verticalScroll(rememberScrollState())) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            IconButton(onClick = onBack) { BackIcon(txtCol) }
+            Text(if (lang == Lang.EN) "HELP CENTER" else "सहायता केंद्र", fontSize = 20.sp, fontWeight = FontWeight.Black, color = txtCol)
+        }
+        Spacer(Modifier.height(32.dp))
+        listOf("How to earn XP?", "Managing Profile", "Offline Access", "Reporting Bugs").forEach { question ->
+            Surface(
+                modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                color = CardBg,
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text(question, modifier = Modifier.weight(1f), color = GhostWhite)
+                    Text("?", color = accent, fontWeight = FontWeight.Black)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun DrawerItem(
+    label: String,
+    screen: Screen,
+    currentScreen: Screen,
+    onNavigate: (Screen) -> Unit,
+    accent: Color
+) {
+    val isSelected = currentScreen == screen
+    NavigationDrawerItem(
+        label = { Text(label, fontWeight = if (isSelected) FontWeight.Black else FontWeight.Normal) },
+        selected = isSelected,
+        onClick = { onNavigate(screen) },
+        colors = NavigationDrawerItemDefaults.colors(
+            unselectedContainerColor = Color.Transparent,
+            selectedContainerColor = accent.copy(alpha = 0.1f),
+            unselectedTextColor = GhostWhite.copy(alpha = 0.7f),
+            selectedTextColor = accent
+        ),
+        shape = RoundedCornerShape(12.dp),
+        modifier = Modifier.padding(vertical = 4.dp)
+    )
+}
+
+@Composable
+fun AboutUsScreen(accent: Color, txtCol: Color, lang: Lang, onBack: () -> Unit) {
+    Column(modifier = Modifier.fillMaxSize().padding(24.dp).verticalScroll(rememberScrollState())) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            IconButton(onClick = onBack) { BackIcon(txtCol) }
+            Text(if (lang == Lang.EN) "ABOUT US" else "हमारे बारे में", fontSize = 20.sp, fontWeight = FontWeight.Black, color = txtCol)
+        }
+        Spacer(Modifier.height(32.dp))
+        Text(
+            if (lang == Lang.EN)
+                "Inscit is a cutting-edge educational platform dedicated to making science interactive and accessible for everyone. Our mission is to inspire the next generation of explorers through immersive simulations and gamified learning."
+            else
+                "Inscit एक अत्याधुनिक शैक्षिक मंच है जो विज्ञान को सभी के लिए इंटरैक्टिव और सुलभ बनाने के लिए समर्पित है। हमारा मिशन इमर्सिव सिमुलेशन और गेमिफाइड लर्निंग के माध्यम से खोजकर्ताओं की अगली पीढ़ी को प्रेरित करना है।",
+            color = GhostWhite.copy(alpha = 0.8f), lineHeight = 24.sp
+        )
+        Spacer(Modifier.height(24.dp))
+        Text("OUR VISION", fontWeight = FontWeight.Bold, color = accent)
+        Text(
+            if (lang == Lang.EN) "To build a world where complex scientific concepts are easily understood through play and exploration."
+            else "एक ऐसी दुनिया का निर्माण करना जहां खेल और अन्वेषण के माध्यम से जटिल वैज्ञानिक अवधारणाओं को आसानी से समझा जा सके।",
+            color = GhostWhite.copy(alpha = 0.8f)
+        )
+    }
+}
+
+@Composable
+fun ContactUsScreen(accent: Color, txtCol: Color, lang: Lang, onBack: () -> Unit) {
+    Column(modifier = Modifier.fillMaxSize().padding(24.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            IconButton(onClick = onBack) { BackIcon(txtCol) }
+            Text(if (lang == Lang.EN) "CONTACT US" else "संपर्क करें", fontSize = 20.sp, fontWeight = FontWeight.Black, color = txtCol)
+        }
+        Spacer(Modifier.height(32.dp))
+        Text(if (lang == Lang.EN) "GET IN TOUCH" else "संपर्क में रहें", fontWeight = FontWeight.Bold, color = accent)
+        Spacer(Modifier.height(16.dp))
+        ContactItem(if (lang == Lang.EN) "Email: support@inscit.com" else "ईमेल: support@inscit.com")
+        ContactItem(if (lang == Lang.EN) "Twitter: @InscitApp" else "ट्विटर: @InscitApp")
+        ContactItem(if (lang == Lang.EN) "Website: www.inscit.com" else "वेबसाइट: www.inscit.com")
+    }
+}
+
+@Composable
+fun ContactItem(text: String) {
+    Surface(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+        shape = RoundedCornerShape(12.dp),
+        color = CardBg,
+        border = BorderStroke(1.dp, GhostWhite.copy(alpha = 0.05f))
+    ) {
+        Text(text, modifier = Modifier.padding(16.dp), color = GhostWhite)
+    }
+}
+
+@Composable
+fun DonateScreen(accent: Color, txtCol: Color, lang: Lang, onBack: () -> Unit) {
+    Column(modifier = Modifier.fillMaxSize().padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+        Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            IconButton(onClick = onBack) { BackIcon(txtCol) }
+            Text(if (lang == Lang.EN) "SUPPORT US" else "हमारा समर्थन करें", fontSize = 20.sp, fontWeight = FontWeight.Black, color = txtCol)
+        }
+        Spacer(Modifier.height(64.dp))
+        Text("♥", fontSize = 64.sp, color = PowerRed)
+        Spacer(Modifier.height(16.dp))
+        Text(
+            if (lang == Lang.EN) "Your support helps us keep Inscit free and build more amazing features."
+            else "आपका समर्थन हमें Inscit को मुफ्त रखने और अधिक अद्भुत सुविधाएं बनाने में मदद करता है।",
+            textAlign = TextAlign.Center, color = GhostWhite.copy(alpha = 0.8f)
+        )
+        Spacer(Modifier.height(48.dp))
+        Button(
+            onClick = { /* Handle donation */ },
+            modifier = Modifier.fillMaxWidth().height(60.dp),
+            shape = RoundedCornerShape(16.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = accent, contentColor = DeepSpace)
+        ) {
+            Text(if (lang == Lang.EN) "DONATE NOW" else "अभी दान करें", fontWeight = FontWeight.ExtraBold)
         }
     }
 }
@@ -691,9 +1007,9 @@ fun NotesFolderScreen(
             IconButton(onClick = onBack) { BackIcon(color = txtCol) }
             Text(if (lang == Lang.EN) "KNOWLEDGE HUB" else "नॉलेज हब", fontSize = 20.sp, fontWeight = FontWeight.Black, color = txtCol, letterSpacing = 2.sp)
         }
-        
+
         Spacer(Modifier.height(40.dp))
-        
+
         Branch.entries.forEach { branch ->
             Surface(
                 onClick = { onOpenNote(branch, lang) },
@@ -750,41 +1066,41 @@ fun LabScreen(
             IconButton(onClick = onBack) { BackIcon(color = txtCol) }
             Text("$branchName LAB", fontSize = 20.sp, fontWeight = FontWeight.Black, color = txtCol, letterSpacing = 2.sp)
         }
-        
+
         Spacer(Modifier.height(60.dp))
-        
+
         InteractiveDiagram(branch, accent)
-        
+
         Spacer(Modifier.height(40.dp))
-        
+
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
                 if (lang == Lang.EN) "EXPERIMENTAL DATA" else "प्रायोगिक डेटा",
                 fontSize = 14.sp, fontWeight = FontWeight.Bold, color = accent
             )
             Spacer(Modifier.width(8.dp))
-            IconButton(onClick = { 
-                val text = if (lang == Lang.EN) "Access the detailed scientific syllabus and interactive modules." 
+            IconButton(onClick = {
+                val text = if (lang == Lang.EN) "Access the detailed scientific syllabus and interactive modules."
                           else "विस्तृत वैज्ञानिक पाठ्यक्रम और इंटरैक्टिव मॉड्यूल तक पहुंचें।"
-                tts.speak(text) 
+                tts.speak(text)
             }, modifier = Modifier.size(20.dp)) {
                 SpeakerIcon(accent, Modifier.size(16.dp))
             }
         }
-        
+
         Spacer(Modifier.height(20.dp))
-        
+
         Text(
-            if (lang == Lang.EN) "Access the detailed scientific syllabus and interactive modules." 
+            if (lang == Lang.EN) "Access the detailed scientific syllabus and interactive modules."
             else "विस्तृत वैज्ञानिक पाठ्यक्रम और इंटरैक्टिव मॉड्यूल तक पहुंचें।",
             textAlign = TextAlign.Center,
             color = txtCol.copy(alpha = 0.7f),
             fontSize = 16.sp,
             modifier = Modifier.padding(horizontal = 20.dp)
         )
-        
+
         Spacer(Modifier.weight(1f))
-        
+
         Button(
             onClick = onNotes,
             modifier = Modifier.fillMaxWidth().height(60.dp),
@@ -803,7 +1119,7 @@ fun InteractiveDiagram(branch: Branch, accent: Color, modifier: Modifier = Modif
     var frequency by remember { mutableFloatStateOf(2f) }
     // Initial value based on branch
     var scaleFactor by remember { mutableFloatStateOf(if (branch == Branch.CHEMISTRY) 3f else 1f) }
-    
+
     val animatedInteraction by animateFloatAsState(
         targetValue = interactionState,
         animationSpec = infiniteRepeatable(tween(2000, easing = LinearEasing), RepeatMode.Restart),
@@ -812,7 +1128,7 @@ fun InteractiveDiagram(branch: Branch, accent: Color, modifier: Modifier = Modif
 
     LaunchedEffect(Unit) {
         while(true) {
-            withFrameMillis { 
+            withFrameMillis {
                 interactionState += 0.05f * frequency
             }
         }
@@ -839,7 +1155,7 @@ fun InteractiveDiagram(branch: Branch, accent: Color, modifier: Modifier = Modif
                         val path = Path()
                         for (i in 0..size.width.toInt()) {
                             val x = i.toFloat()
-                            val y = size.height / 2 + waveHeight * kotlin.math.sin((x / size.width) * 2 * Math.PI.toFloat() * frequency + animatedInteraction)
+                            val y = size.height / 2 + waveHeight * sin((x / size.width) * 2 * Math.PI.toFloat() * frequency + animatedInteraction)
                             if (i == 0) path.moveTo(x, y) else path.lineTo(x, y)
                         }
                         drawPath(path, accent, style = Stroke(width = 4f, cap = StrokeCap.Round))
@@ -848,25 +1164,25 @@ fun InteractiveDiagram(branch: Branch, accent: Color, modifier: Modifier = Modif
                         val center = Offset(size.width / 2, size.height / 2)
                         val numShells = scaleFactor.toInt().coerceIn(1, 7)
                         val shellCapacities = listOf(2, 8, 18, 32, 50, 72, 98)
-                        
+
                         // Draw Nucleus
                         drawCircle(accent, radius = 18f, center = center)
                         drawCircle(GhostWhite.copy(alpha = 0.3f), radius = 10f, center = center)
-                        
+
                         val maxRadius = (size.minDimension / 2.2f)
                         val shellSpacing = (maxRadius - 40f) / 7f
-                        
+
                         for (orbit in 0 until numShells) {
                             val radius = 50f + orbit * shellSpacing
                             drawCircle(accent.copy(alpha = 0.15f), radius = radius, center = center, style = Stroke(width = 1.5f))
-                            
+
                             val electronCount = shellCapacities[orbit]
                             for (i in 0 until electronCount) {
                                 val angleOffset = (2 * Math.PI.toFloat() / electronCount) * i
                                 // "Do not increase speed of rotation" - use consistent base speed
                                 val electronAngle = animatedInteraction + angleOffset
-                                val ex = center.x + radius * kotlin.math.cos(electronAngle)
-                                val ey = center.y + radius * kotlin.math.sin(electronAngle)
+                                val ex = center.x + radius * cos(electronAngle)
+                                val ey = center.y + radius * sin(electronAngle)
                                 drawCircle(GhostWhite, radius = 4f, center = Offset(ex, ey))
                                 // Electron glow
                                 drawCircle(accent.copy(alpha = 0.3f), radius = 6f, center = Offset(ex, ey))
@@ -876,11 +1192,11 @@ fun InteractiveDiagram(branch: Branch, accent: Color, modifier: Modifier = Modif
                     Branch.BIOLOGY -> {
                         val center = Offset(size.width / 2, size.height / 2)
                         val baseRadius = 120f
-                        
+
                         // Cell Membrane
                         drawCircle(accent.copy(alpha = 0.05f), radius = baseRadius, center = center)
                         drawCircle(accent, radius = baseRadius, center = center, style = Stroke(width = 4f))
-                        
+
                         // Cytoplasm streaming effect with ribosomes and mitochondria
                         val activity = scaleFactor
                         val organelleCount = (12 * activity).toInt()
@@ -888,9 +1204,9 @@ fun InteractiveDiagram(branch: Branch, accent: Color, modifier: Modifier = Modif
                             val dist = (baseRadius * 0.35f) + (i * 7f) % (baseRadius * 0.55f)
                             val drift = animatedInteraction * 0.2f
                             val angle = drift + (i * 137.5f * (Math.PI.toFloat() / 180f))
-                            val ox = center.x + dist * kotlin.math.cos(angle)
-                            val oy = center.y + dist * kotlin.math.sin(angle)
-                            
+                            val ox = center.x + dist * cos(angle)
+                            val oy = center.y + dist * sin(angle)
+
                             if (i % 4 == 0) {
                                 // Mitochondria (Oval)
                                 val mColor = Color(0xFFFFA500)
@@ -906,11 +1222,11 @@ fun InteractiveDiagram(branch: Branch, accent: Color, modifier: Modifier = Modif
                         val nucleusRadius = 35f
                         drawCircle(TechViolet.copy(alpha = 0.2f), radius = nucleusRadius, center = center)
                         drawCircle(TechViolet, radius = nucleusRadius, center = center, style = Stroke(width = 2f))
-                        
+
                         // DNA representation
                         for (i in 0 until 6) {
                             val py = center.y - nucleusRadius + (i + 1) * (nucleusRadius * 2 / 7f)
-                            val wave = kotlin.math.sin(animatedInteraction + i) * 12f
+                            val wave = sin(animatedInteraction + i) * 12f
                             drawCircle(GhostWhite.copy(alpha = 0.6f), radius = 3f, center = Offset(center.x + wave, py))
                             drawCircle(GhostWhite.copy(alpha = 0.6f), radius = 3f, center = Offset(center.x - wave, py))
                             drawLine(GhostWhite.copy(alpha = 0.3f), Offset(center.x - wave, py), Offset(center.x + wave, py), strokeWidth = 1f)
@@ -918,7 +1234,7 @@ fun InteractiveDiagram(branch: Branch, accent: Color, modifier: Modifier = Modif
                     }
                 }
             }
-            
+
             Column(
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
@@ -944,9 +1260,9 @@ fun InteractiveDiagram(branch: Branch, accent: Color, modifier: Modifier = Modif
                 }
             }
         }
-        
+
         Spacer(Modifier.height(16.dp))
-        
+
         // Interactive Controls
         Column(Modifier.fillMaxWidth().padding(horizontal = 8.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -1010,18 +1326,18 @@ fun NotesScreen(
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onBack) { BackIcon(color = txtCol) }
             Text(
-                if (showObservations) (if (lang == Lang.EN) "$branchName DECK" else "$branchName डेक") else (if (lang == Lang.EN) "$branchName NOTES" else "$branchName नोट्स"), 
+                if (showObservations) (if (lang == Lang.EN) "$branchName DECK" else "$branchName डेक") else (if (lang == Lang.EN) "$branchName NOTES" else "$branchName नोट्स"),
                 fontSize = 18.sp, fontWeight = FontWeight.Black, color = txtCol, letterSpacing = 1.sp
             )
             Spacer(Modifier.weight(1f))
-            IconButton(onClick = { showObservations = !showObservations }) { 
-                DrawingIcon(color = if (showObservations) accent else txtCol.copy(alpha = 0.5f)) 
+            IconButton(onClick = { showObservations = !showObservations }) {
+                DrawingIcon(color = if (showObservations) accent else txtCol.copy(alpha = 0.5f))
             }
             IconButton(onClick = onSave) { SaveIcon(color = accent) }
         }
-        
+
         Spacer(Modifier.height(32.dp))
-        
+
         if (showObservations) {
             // Dedicated full-space observation deck
             UserObservationSection(
@@ -1038,7 +1354,7 @@ fun NotesScreen(
                 item {
                     InteractiveDiagram(branch, accent)
                 }
-                
+
                 items(notes) { note ->
                     Column(
                         modifier = Modifier
@@ -1127,12 +1443,12 @@ fun LocalProfileView(
 
         OutlinedTextField(
             value = editedName,
-            onValueChange = { 
+            onValueChange = {
                 editedName = it
                 onUpdateProfile(userDoc.copy(profile = userDoc.profile.copy(name = it)))
             },
             label = { Text(if (lang == Lang.EN) "CORE IDENTIFIER" else "कोर पहचानकर्ता", color = accent, fontSize = 10.sp, fontWeight = FontWeight.Bold) },
-            textStyle = androidx.compose.ui.text.TextStyle(color = GhostWhite, fontWeight = FontWeight.Black, fontSize = 18.sp, letterSpacing = 2.sp),
+            textStyle = TextStyle(color = GhostWhite, fontWeight = FontWeight.Black, fontSize = 18.sp, letterSpacing = 2.sp),
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(16.dp),
             colors = OutlinedTextFieldDefaults.colors(
@@ -1225,9 +1541,9 @@ fun ShimmeringText(
         modifier = modifier,
         textAlign = textAlign,
         style = TextStyle(
-            brush = brush, 
-            fontWeight = FontWeight.Bold, 
-            fontSize = 13.sp, 
+            brush = brush,
+            fontWeight = FontWeight.Bold,
+            fontSize = 13.sp,
             letterSpacing = 2.sp
         )
     )
@@ -1240,7 +1556,7 @@ fun IosSlider(
     modifier: Modifier = Modifier
 ) {
     var dragOffset by remember { mutableStateOf(0f) }
-    val density = androidx.compose.ui.platform.LocalDensity.current
+    val density = LocalDensity.current
     val swipeThreshold = 0.85f
     val animatedDragOffset by animateFloatAsState(
         targetValue = dragOffset,
@@ -1259,12 +1575,12 @@ fun IosSlider(
         val handleSize = maxHeight - 8.dp
         val handleSizePx = with(density) { handleSize.toPx() }
         val maxOffsetPx = (widthPx - handleSizePx - with(density) { 8.dp.toPx() }).coerceAtLeast(0f)
-        
+
         ShimmeringText(
             text = "SLIDE TO INITIALIZE",
             modifier = Modifier.fillMaxWidth()
         )
-        
+
         Box(
             modifier = Modifier
                 .offset { IntOffset(animatedDragOffset.toInt() + with(density) { 4.dp.toPx() }.toInt(), 0) }
@@ -1346,22 +1662,27 @@ fun ModernHome(
     onQuiz: () -> Unit,
     onTheme: () -> Unit,
     onProfile: () -> Unit,
-    onXpClick: () -> Unit
+    onXpClick: () -> Unit,
+    onMenuClick: () -> Unit
 ) {
     Column(
         modifier = Modifier.fillMaxSize().padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Column(
+        Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalAlignment = Alignment.CenterHorizontally
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
         ) {
+            IconButton(onClick = onMenuClick) {
+                MenuIcon(color = txtCol)
+            }
             Surface(
                 onClick = onProfile,
-                modifier = Modifier.size(80.dp),
+                modifier = Modifier.size(50.dp),
                 shape = CircleShape,
                 color = CardBg,
-                border = BorderStroke(2.dp, accent.copy(alpha = 0.5f))
+                border = BorderStroke(1.dp, accent.copy(alpha = 0.5f))
             ) {
                 ProfileImage(
                     photoUrl = photoUrl,
@@ -1369,7 +1690,14 @@ fun ModernHome(
                     placeholderColor = accent
                 )
             }
-            Spacer(Modifier.height(12.dp))
+        }
+
+        Spacer(Modifier.height(16.dp))
+
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
             Text(
                 if (lang == Lang.EN) "Hello, $userName" else "नमस्ते, $userName",
                 color = GhostWhite,
@@ -1378,9 +1706,9 @@ fun ModernHome(
                 letterSpacing = 1.sp
             )
         }
-        
+
         Spacer(Modifier.height(32.dp))
-        
+
         // Stats Overview - Slimmer version
         Surface(
             onClick = onXpClick,
@@ -1408,15 +1736,15 @@ fun ModernHome(
         }
 
         Spacer(Modifier.height(32.dp))
-        
+
         // Quick Actions
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
             ActionCard(if (lang == Lang.EN) "INITIATE QUIZ" else "क्विज़ शुरू करें", accent, Modifier.weight(1.3f), onQuiz)
             ActionCard(if (lang == Lang.EN) "SETTINGS" else "सेटिंग्स", GhostWhite.copy(alpha = 0.05f), Modifier.weight(0.7f), onTheme)
         }
-        
+
         Spacer(Modifier.height(40.dp))
-        
+
         Text(
             if (lang == Lang.EN) "SCIENCE BRANCHES" else "विज्ञान की शाखाएं",
             color = accent,
@@ -1425,9 +1753,9 @@ fun ModernHome(
             letterSpacing = 2.sp,
             modifier = Modifier.align(Alignment.Start)
         )
-        
+
         Spacer(Modifier.height(16.dp))
-        
+
         LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
             items(Branch.entries) { branch ->
                 BranchCard(branch, lang, accent, onNav)
@@ -1515,7 +1843,7 @@ fun ThemeSelectionScreen(
             IconButton(onClick = onBack) { BackIcon(color = txtCol) }
             Text(if (lang == Lang.EN) "SETTINGS" else "सेटिंग्स", fontSize = 20.sp, fontWeight = FontWeight.Black, color = txtCol, letterSpacing = 2.sp)
         }
-        
+
         Spacer(Modifier.height(60.dp))
 
         Text(if (lang == Lang.EN) "APP LANGUAGE" else "ऐप की भाषा", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = accent, letterSpacing = 2.sp, modifier = Modifier.align(Alignment.Start))
@@ -1523,19 +1851,19 @@ fun ThemeSelectionScreen(
         LanguageSlider(lang, accent, onLangToggle)
 
         Spacer(Modifier.height(32.dp))
-        
+
         Text(if (lang == Lang.EN) "INTERFACE THEME" else "इंटरफ़ेस थीम", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = accent, letterSpacing = 2.sp, modifier = Modifier.align(Alignment.Start))
         Spacer(Modifier.height(16.dp))
-        
+
         ThemeItem(if (lang == Lang.EN) "NEON PROTOCOL" else "नियॉन प्रोटोकॉल", ThemeMode.NEON, current == ThemeMode.NEON, accent) { onToggle(ThemeMode.NEON) }
         Spacer(Modifier.height(12.dp))
         ThemeItem(if (lang == Lang.EN) "NOBLE ARCHIVE" else "नोबल आर्काइव", ThemeMode.NOBLE, current == ThemeMode.NOBLE, accent) { onToggle(ThemeMode.NOBLE) }
-        
+
         Spacer(Modifier.height(48.dp))
-        
+
         Text(if (lang == Lang.EN) "KNOWLEDGE BASE" else "नॉलेज बेस", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = accent, letterSpacing = 2.sp, modifier = Modifier.align(Alignment.Start))
         Spacer(Modifier.height(16.dp))
-        
+
         Surface(
             onClick = onOpenFolder,
             modifier = Modifier.fillMaxWidth().height(64.dp),
@@ -1551,12 +1879,12 @@ fun ThemeSelectionScreen(
                 Text("→", color = GhostWhite.copy(alpha = 0.2f))
             }
         }
-        
+
         Spacer(Modifier.height(32.dp))
-        
+
         Text(if (lang == Lang.EN) "SAVED OBSERVATIONS" else "सेव की गई ऑब्जर्वेशन", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = accent, letterSpacing = 2.sp, modifier = Modifier.align(Alignment.Start))
         Spacer(Modifier.height(16.dp))
-        
+
         Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState())) {
             Branch.entries.forEach { branch ->
                 Surface(
@@ -1573,7 +1901,7 @@ fun ThemeSelectionScreen(
                             Branch.BIOLOGY -> "जीव विज्ञान"
                         }, color = GhostWhite, fontSize = 14.sp, fontWeight = FontWeight.Bold)
                         Spacer(Modifier.weight(1f))
-                        Text(if (lang == Lang.EN) "VIEW" else "देखें", color = accent, fontSize = 10.sp, fontWeight = FontWeight.Black, modifier = Modifier.clickable { 
+                        Text(if (lang == Lang.EN) "VIEW" else "देखें", color = accent, fontSize = 10.sp, fontWeight = FontWeight.Black, modifier = Modifier.clickable {
                             onViewNote(branch)
                         })
                     }
@@ -1582,7 +1910,7 @@ fun ThemeSelectionScreen(
         }
 
         Spacer(Modifier.weight(1f))
-        
+
         Text(
             "INSCIT OMEGA v9.0.4",
             color = txtCol.copy(alpha = 0.3f),
@@ -1616,8 +1944,8 @@ fun LanguageSlider(current: Lang, accent: Color, onToggle: (Lang) -> Unit) {
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    "ENGLISH", 
-                    color = if (current == Lang.EN) DeepSpace else GhostWhite, 
+                    "ENGLISH",
+                    color = if (current == Lang.EN) DeepSpace else GhostWhite,
                     fontWeight = FontWeight.Black,
                     fontSize = 12.sp,
                     letterSpacing = 1.sp
@@ -1633,8 +1961,8 @@ fun LanguageSlider(current: Lang, accent: Color, onToggle: (Lang) -> Unit) {
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    "HINDI", 
-                    color = if (current == Lang.HI) DeepSpace else GhostWhite, 
+                    "HINDI",
+                    color = if (current == Lang.HI) DeepSpace else GhostWhite,
                     fontWeight = FontWeight.Black,
                     fontSize = 12.sp,
                     letterSpacing = 1.sp
@@ -1672,7 +2000,7 @@ fun UserObservationSection(
 ) {
     val context = LocalContext.current
     var text by remember(userNote.content) { mutableStateOf(userNote.content) }
-    
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -1708,12 +2036,12 @@ fun UserObservationSection(
                 }, modifier = Modifier.size(24.dp)) { ExportIcon(accent) }
             }
         }
-        
+
         Spacer(Modifier.height(12.dp))
-        
+
         TextField(
             value = text,
-            onValueChange = { 
+            onValueChange = {
                 text = it
                 onNoteChange(userNote.copy(content = it))
             },
@@ -1729,9 +2057,9 @@ fun UserObservationSection(
                 unfocusedTextColor = GhostWhite
             )
         )
-        
+
         Spacer(Modifier.height(if (fullSpace) 24.dp else 16.dp))
-        
+
         Row(verticalAlignment = Alignment.CenterVertically) {
             DrawingIcon(accent, Modifier.size(16.dp))
             Spacer(Modifier.width(8.dp))
@@ -1743,19 +2071,19 @@ fun UserObservationSection(
                 }
             }
         }
-        
+
         Spacer(Modifier.height(8.dp))
-        
+
         DrawingCanvas(
             drawingData = userNote.drawingData,
             onDrawingChange = { onNoteChange(userNote.copy(drawingData = it)) },
             color = accent,
             modifier = if (fullSpace) Modifier.weight(1f) else Modifier.height(200.dp)
         )
-        
+
         if (!fullSpace) {
             Spacer(Modifier.height(16.dp))
-            
+
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
                 IconButton(onClick = {
                     val shareIntent = Intent().apply {
@@ -1886,7 +2214,7 @@ fun ExportListScreen(
                             Column(Modifier.weight(1f)) {
                                 Text(file.name, color = GhostWhite, fontWeight = FontWeight.Bold, fontSize = 14.sp)
                                 Text(
-                                    java.text.SimpleDateFormat("dd MMM yyyy, HH:mm").format(java.util.Date(file.lastModified())),
+                                    SimpleDateFormat("dd MMM yyyy, HH:mm").format(Date(file.lastModified())),
                                     color = accent.copy(alpha = 0.6f),
                                     fontSize = 10.sp
                                 )
@@ -1934,12 +2262,12 @@ fun ExportDetailScreen(
             border = BorderStroke(1.dp, GhostWhite.copy(alpha = 0.05f))
         ) {
             Column(Modifier.padding(24.dp).verticalScroll(rememberScrollState())) {
-                Text(content, color = GhostWhite.copy(alpha = 0.8f), fontSize = 14.sp, lineHeight = 22.sp, fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace)
+                Text(content, color = GhostWhite.copy(alpha = 0.8f), fontSize = 14.sp, lineHeight = 22.sp, fontFamily = FontFamily.Monospace)
             }
         }
-        
+
         Spacer(Modifier.height(24.dp))
-        
+
         Button(
             onClick = { shareFile(context, file) },
             modifier = Modifier.fillMaxWidth().height(60.dp),
@@ -2031,7 +2359,7 @@ fun RankingsScreen(
             items(Rank.entries) { rank ->
                 val isUnlocked = totalXp >= rank.threshold
                 val isCurrent = rank == currentRank
-                
+
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(16.dp),
