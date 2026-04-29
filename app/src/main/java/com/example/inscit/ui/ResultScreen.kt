@@ -26,6 +26,8 @@ import com.example.inscit.quiz.*
 import kotlin.math.cos
 import kotlin.math.sin
 
+import com.example.inscit.ui.theme.spacing
+
 @Composable
 fun ScienceResultScreen(
     analytics: ScienceAnalytics,
@@ -34,104 +36,115 @@ fun ScienceResultScreen(
     onRetry: () -> Unit,
     onFinish: () -> Unit
 ) {
-    LazyColumn(
-        modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        item {
-            Spacer(Modifier.height(16.dp))
-            Text(
-                text = if (lang == Lang.EN) "LAB REPORT" else "लैब रिपोर्ट",
-                style = MaterialTheme.typography.labelMedium,
-                color = accent,
-                letterSpacing = 2.sp,
-                fontWeight = FontWeight.Black
-            )
-            Text(
-                text = "${analytics.overallScore}%",
-                fontSize = 80.sp,
-                fontWeight = FontWeight.Black,
-                color = GhostWhite
-            )
-            Text(
-                text = if (lang == Lang.EN) analytics.scienceTypeEn else analytics.scienceTypeHi,
-                style = MaterialTheme.typography.headlineMedium,
-                color = accent,
-                fontWeight = FontWeight.Bold
-            )
-            Spacer(Modifier.height(48.dp))
-        }
+    val spacing = MaterialTheme.spacing
+    BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+        val screenWidth = maxWidth
+        val horizontalPadding = if (screenWidth > 600.dp) spacing.huge else spacing.large
 
-        item {
-            ScienceRadarChart(
-                data = analytics.radarData,
-                accent = accent,
-                modifier = Modifier
-                    .size(300.dp)
-                    .padding(16.dp)
-            )
-            Spacer(Modifier.height(48.dp))
-        }
-
-        item {
-            ResultTraitsSection(
-                title = if (lang == Lang.EN) "STRENGTHS" else "ताकत",
-                traits = if (lang == Lang.EN) analytics.strengthsEn else analytics.strengthsHi,
-                accent = accent,
-                isPositive = true
-            )
-            Spacer(Modifier.height(24.dp))
-            ResultTraitsSection(
-                title = if (lang == Lang.EN) "WEAKNESSES" else "कमजोरियां",
-                traits = if (lang == Lang.EN) analytics.weaknessesEn else analytics.weaknessesHi,
-                accent = PowerRed,
-                isPositive = false
-            )
-            Spacer(Modifier.height(48.dp))
-        }
-
-        item {
-            Text(
-                text = if (lang == Lang.EN) "SCIENTIFIC EXPLANATIONS" else "वैज्ञानिक व्याख्या",
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp),
-                fontSize = 18.sp,
-                color = accent,
-                fontWeight = FontWeight.Black,
-                letterSpacing = 1.sp
-            )
-            Spacer(Modifier.height(20.dp))
-        }
-
-        items(analytics.explanations) { (question, explanation) ->
-            ResultExplanationCard(question, explanation, accent)
-        }
-
-        item {
-            Spacer(Modifier.height(40.dp))
-            Button(
-                onClick = onRetry,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(60.dp),
-                shape = RoundedCornerShape(16.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = accent, contentColor = Color.Black)
-            ) {
-                Text(if (lang == Lang.EN) "RETRY QUIZ" else "पुनः प्रयास करें", fontWeight = FontWeight.Black, fontSize = 16.sp)
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(horizontal = horizontalPadding, vertical = spacing.large),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            item {
+                Spacer(Modifier.height(spacing.medium))
+                Text(
+                    text = if (lang == Lang.EN) "LAB REPORT" else "लैब रिपोर्ट",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = accent,
+                    letterSpacing = 2.sp
+                )
+                Text(
+                    text = "${analytics.overallScore}%",
+                    style = MaterialTheme.typography.headlineLarge.copy(fontSize = if (screenWidth > 600.dp) 120.sp else 80.sp),
+                    color = GhostWhite
+                )
+                Text(
+                    text = if (lang == Lang.EN) analytics.scienceTypeEn else analytics.scienceTypeHi,
+                    style = MaterialTheme.typography.headlineMedium,
+                    color = accent
+                )
+                Spacer(Modifier.height(spacing.huge))
             }
-            Spacer(Modifier.height(16.dp))
-            OutlinedButton(
-                onClick = onFinish,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(60.dp),
-                shape = RoundedCornerShape(16.dp),
-                border = BorderStroke(1.5.dp, accent),
-                colors = ButtonDefaults.outlinedButtonColors(contentColor = accent)
-            ) {
-                Text(if (lang == Lang.EN) "BACK TO HUB" else "हब पर वापस जाएं", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+
+            item {
+                Surface(
+                    modifier = Modifier
+                        .size(if (screenWidth > 600.dp) 400.dp else 320.dp)
+                        .padding(spacing.medium),
+                    color = CardBg,
+                    shape = RoundedCornerShape(32.dp),
+                    border = BorderStroke(1.dp, GhostWhite.copy(alpha = 0.05f))
+                ) {
+                    ScienceRadarChart(
+                        data = analytics.radarData,
+                        accent = accent,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(spacing.large)
+                    )
+                }
+                Spacer(Modifier.height(spacing.huge))
             }
-            Spacer(Modifier.height(48.dp))
+
+            item {
+                ResultTraitsSection(
+                    title = if (lang == Lang.EN) "STRENGTHS" else "ताकत",
+                    traits = if (lang == Lang.EN) analytics.strengthsEn else analytics.strengthsHi,
+                    accent = accent,
+                    isPositive = true
+                )
+                Spacer(Modifier.height(spacing.large))
+                ResultTraitsSection(
+                    title = if (lang == Lang.EN) "WEAKNESSES" else "कमजोरियां",
+                    traits = if (lang == Lang.EN) analytics.weaknessesEn else analytics.weaknessesHi,
+                    accent = PowerRed,
+                    isPositive = false
+                )
+                Spacer(Modifier.height(spacing.huge))
+            }
+
+            item {
+                Text(
+                    text = if (lang == Lang.EN) "SCIENTIFIC EXPLANATIONS" else "वैज्ञानिक व्याख्या",
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = accent,
+                    letterSpacing = 1.sp
+                )
+                Spacer(Modifier.height(spacing.medium))
+            }
+
+            items(analytics.explanations) { (question, explanation) ->
+                ResultExplanationCard(question, explanation, accent)
+            }
+
+            item {
+                Spacer(Modifier.height(spacing.huge))
+                Button(
+                    onClick = onRetry,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(64.dp),
+                    shape = RoundedCornerShape(20.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = accent, contentColor = Color.Black)
+                ) {
+                    Text(if (lang == Lang.EN) "RETRY QUIZ" else "पुनः प्रयास करें", style = MaterialTheme.typography.titleMedium)
+                }
+                Spacer(Modifier.height(spacing.medium))
+                OutlinedButton(
+                    onClick = onFinish,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(64.dp),
+                    shape = RoundedCornerShape(20.dp),
+                    border = BorderStroke(2.dp, accent),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = accent)
+                ) {
+                    Text(if (lang == Lang.EN) "BACK TO HUB" else "हब पर वापस जाएं", style = MaterialTheme.typography.titleMedium)
+                }
+                Spacer(Modifier.height(spacing.huge))
+            }
         }
     }
 }

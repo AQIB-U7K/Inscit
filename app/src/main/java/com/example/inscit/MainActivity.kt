@@ -33,7 +33,6 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -149,7 +148,7 @@ import kotlin.math.cos
 import kotlin.math.sin
 import com.example.inscit.ui.LeaderboardScreen
 import kotlinx.coroutines.launch
-
+import com.example.inscit.ui.theme.spacing
 enum class Screen {
  SPLASH, HOME, LAB, QUIZ, NOTES, THEME_CONFIG, NOTES_FOLDER, PROFILE, TOPIC_SELECTION, TOPIC_DETAIL, EXPORTS_LIST, EXPORT_DETAIL, RANKINGS, ABOUT_US, CONTACT_US, DONATE, LEADERBOARD, FEEDBACK, ACHIEVEMENTS, DAILY_QUIZ, NEWS_UPDATES, HELP_CENTER }
 enum class Branch { PHYSICS, CHEMISTRY, BIOLOGY }
@@ -616,7 +615,7 @@ fun AppEngine(tts: TTSManager) {
                             tts = tts,
                             accent = primaryAccent,
                             txtCol = textColor,
-                            userNote = (userDocument.userNotes[selectedBranch.name] ?: UserNote()) as UserNote,
+                            userNote = (userDocument.userNotes[selectedBranch.name] ?: UserNote()) ,
                             onNoteChange = { newNote ->
                                 val updatedNotes = userDocument.userNotes.toMutableMap()
                                 updatedNotes[selectedBranch.name] = newNote
@@ -710,6 +709,8 @@ fun AppEngine(tts: TTSManager) {
     }
 }
 
+
+
 @Composable
 fun DrawerContent(
     currentScreen: Screen,
@@ -719,20 +720,21 @@ fun DrawerContent(
     userName: String,
     totalXp: Int
 ) {
+    val spacing = MaterialTheme.spacing
     ModalDrawerSheet(
         drawerContainerColor = DeepSpace,
         drawerContentColor = GhostWhite,
         modifier = Modifier.width(300.dp),
         windowInsets = androidx.compose.foundation.layout.WindowInsets(0.dp)
     ) {
-        Column(Modifier.fillMaxSize().padding(24.dp).verticalScroll(rememberScrollState())) {
+        Column(Modifier.fillMaxSize().padding(spacing.large).verticalScroll(rememberScrollState())) {
             // Header
-            Text("INSCIT OMEGA", fontSize = 24.sp, fontWeight = FontWeight.Black, color = accent, letterSpacing = 2.sp)
-            Spacer(Modifier.height(8.dp))
-            Text(userName, color = GhostWhite, fontWeight = FontWeight.Bold)
-            Text("XP: $totalXp", color = accent, fontSize = 12.sp)
+            Text("INSCIT OMEGA", style = MaterialTheme.typography.headlineMedium, color = accent, letterSpacing = 2.sp)
+            Spacer(Modifier.height(spacing.extraSmall))
+            Text(userName, color = GhostWhite, style = MaterialTheme.typography.titleMedium)
+            Text("XP: $totalXp", color = accent, style = MaterialTheme.typography.labelSmall)
 
-            Spacer(Modifier.height(40.dp))
+            Spacer(Modifier.height(spacing.huge))
 
             DrawerItem("MENU", Screen.HOME, currentScreen, onNavigate, accent)
             DrawerItem(if (lang == Lang.EN) "LEADERBOARD" else "लीडरबोर्ड", Screen.LEADERBOARD, currentScreen, onNavigate, accent)
@@ -745,14 +747,14 @@ fun DrawerContent(
             DrawerItem(if (lang == Lang.EN) "HELP CENTER" else "सहायता केंद्र", Screen.HELP_CENTER, currentScreen, onNavigate, accent)
 
             Spacer(Modifier.weight(1f))
-            Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.height(spacing.large))
 
             DrawerItem(if (lang == Lang.EN) "ABOUT US" else "हमारे बारे में", Screen.ABOUT_US, currentScreen, onNavigate, accent)
             DrawerItem(if (lang == Lang.EN) "CONTACT US" else "संपर्क करें", Screen.CONTACT_US, currentScreen, onNavigate, accent)
             DrawerItem(if (lang == Lang.EN) "DONATE" else "दान करें", Screen.DONATE, currentScreen, onNavigate, accent)
 
-            Spacer(Modifier.height(16.dp))
-            Text("v9.0.4", color = GhostWhite.copy(alpha = 0.3f), fontSize = 10.sp)
+            Spacer(Modifier.height(spacing.medium))
+            Text("v9.0.4", color = GhostWhite.copy(alpha = 0.3f), style = MaterialTheme.typography.labelSmall)
         }
     }
 }
@@ -1473,7 +1475,7 @@ fun LocalProfileView(
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
             StatItem(label = if (lang == Lang.EN) "LEVEL" else "लेवल", value = userDoc.stats.level.toString(), accent)
             StatItem(label = if (lang == Lang.EN) "TOTAL XP" else "कुल XP", value = userDoc.stats.xp.toString(), accent)
-            StatItem(label = if (lang == Lang.EN) "QUIZES TAKEN" else " दिए गए क्विज़", value = userDoc.stats.quizzesTaken.toString(), accent)
+            StatItem(label = if (lang == Lang.EN) "QUIZ'S TAKEN" else " दिए गए क्विज़", value = userDoc.stats.quizzesTaken.toString(), accent)
         }
 
         Spacer(Modifier.height(48.dp))
@@ -1707,7 +1709,7 @@ fun ModernHome(
             )
         }
 
-        Spacer(Modifier.height(32.dp))
+        Spacer(Modifier.height(12.dp))
 
         // Stats Overview - Slimmer version
         Surface(

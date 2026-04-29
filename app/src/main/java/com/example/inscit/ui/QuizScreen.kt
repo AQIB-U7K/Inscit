@@ -26,6 +26,8 @@ import com.example.inscit.models.Lang
 import com.example.inscit.quiz.*
 import kotlinx.coroutines.flow.collectLatest
 
+import com.example.inscit.ui.theme.spacing
+
 @Composable
 fun ScienceQuizScreen(
     lang: Lang,
@@ -35,6 +37,7 @@ fun ScienceQuizScreen(
 ) {
     val state by viewModel.uiState.collectAsState()
     val context = LocalContext.current
+    val spacing = MaterialTheme.spacing
 
     LaunchedEffect(Unit) {
         viewModel.startQuiz(lang)
@@ -76,6 +79,7 @@ fun ScienceQuizScreen(
                 Text(
                     text = currentState.message,
                     color = PowerRed,
+                    style = MaterialTheme.typography.bodyLarge,
                     modifier = Modifier.align(Alignment.Center)
                 )
             }
@@ -91,111 +95,118 @@ private fun QuizContent(
     accent: Color,
     viewModel: QuizViewModel
 ) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        val progress = (state.currentIndex + 1).toFloat() / state.totalQuestions
-        
-        Spacer(Modifier.height(16.dp))
-
-        LinearProgressIndicator(
-            progress = { progress },
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(10.dp)
-                .clip(CircleShape),
-            color = accent,
-            trackColor = accent.copy(alpha = 0.2f)
-        )
-        
-        Spacer(Modifier.height(48.dp))
-
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = if (lang == Lang.EN) "QUESTION ${state.currentIndex + 1} of ${state.totalQuestions}" else "प्रश्न ${state.currentIndex + 1} / ${state.totalQuestions}",
-                color = accent,
-                fontWeight = FontWeight.Bold,
-                fontSize = 12.sp,
-                letterSpacing = 2.sp
-            )
-            
-            Text(
-                text = "XP: ${viewModel.pendingXp}",
-                color = GhostWhite.copy(alpha = 0.5f),
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Black
-            )
-        }
-
-        Spacer(Modifier.height(32.dp))
-
-        Box(modifier = Modifier.weight(1.2f), contentAlignment = Alignment.Center) {
-            Text(
-                text = state.currentQuestion.text,
-                fontSize = 28.sp,
-                color = GhostWhite,
-                textAlign = TextAlign.Center,
-                fontWeight = FontWeight.Bold,
-                lineHeight = 38.sp,
-                modifier = Modifier.fillMaxWidth()
-            )
-        }
-
-        Spacer(Modifier.height(40.dp))
+    val spacing = MaterialTheme.spacing
+    BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+        val screenWidth = maxWidth
+        val horizontalPadding = if (screenWidth > 600.dp) spacing.huge else spacing.large
 
         Column(
-            modifier = Modifier.weight(2f),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = horizontalPadding, vertical = spacing.large),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            state.currentQuestion.options.forEach { option ->
-                val isSelected = state.selectedOptionId == option.id
-                val isCorrect = option.isCorrect
-                
-                val backgroundColor = when {
-                    isSelected && isCorrect -> Color(0xFF4CAF50).copy(alpha = 0.2f)
-                    isSelected && !isCorrect -> Color(0xFFF44336).copy(alpha = 0.2f)
-                    else -> accent.copy(alpha = 0.05f)
-                }
-                
-                val borderColor = when {
-                    isSelected && isCorrect -> Color(0xFF4CAF50)
-                    isSelected && !isCorrect -> Color(0xFFF44336)
-                    else -> GhostWhite.copy(alpha = 0.15f)
-                }
+            val progress = (state.currentIndex + 1).toFloat() / state.totalQuestions
+            
+            Spacer(Modifier.height(spacing.medium))
 
-                Button(
-                    onClick = { viewModel.answerQuestion(option.id) },
-                    enabled = !state.isTransitioning,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(80.dp),
-                    shape = RoundedCornerShape(20.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = backgroundColor,
-                        disabledContainerColor = backgroundColor,
-                        contentColor = GhostWhite
-                    ),
-                    border = BorderStroke(1.5.dp, borderColor),
-                    contentPadding = PaddingValues(horizontal = 24.dp)
+            LinearProgressIndicator(
+                progress = { progress },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(12.dp)
+                    .clip(CircleShape),
+                color = accent,
+                trackColor = accent.copy(alpha = 0.2f)
+            )
+            
+            Spacer(Modifier.height(spacing.huge))
+
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = if (lang == Lang.EN) "QUESTION ${state.currentIndex + 1} of ${state.totalQuestions}" else "प्रश्न ${state.currentIndex + 1} / ${state.totalQuestions}",
+                    color = accent,
+                    style = MaterialTheme.typography.labelLarge,
+                    letterSpacing = 2.sp
+                )
+                
+                Surface(
+                    color = accent.copy(alpha = 0.1f),
+                    shape = RoundedCornerShape(8.dp),
+                    border = BorderStroke(1.dp, accent.copy(alpha = 0.2f))
                 ) {
                     Text(
-                        text = option.text.uppercase(),
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Black,
-                        letterSpacing = 1.sp,
-                        textAlign = TextAlign.Center
+                        text = "XP: ${viewModel.pendingXp}",
+                        color = GhostWhite,
+                        style = MaterialTheme.typography.labelMedium,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                     )
                 }
             }
+
+            Spacer(Modifier.height(spacing.extraLarge))
+
+            Box(modifier = Modifier.weight(1.2f), contentAlignment = Alignment.Center) {
+                Text(
+                    text = state.currentQuestion.text,
+                    style = if (screenWidth > 600.dp) MaterialTheme.typography.headlineLarge else MaterialTheme.typography.headlineMedium,
+                    color = GhostWhite,
+                    textAlign = TextAlign.Center,
+                    lineHeight = 42.sp,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+
+            Spacer(Modifier.height(spacing.extraLarge))
+
+            Column(
+                modifier = Modifier.weight(2f),
+                verticalArrangement = Arrangement.spacedBy(spacing.medium)
+            ) {
+                state.currentQuestion.options.forEach { option ->
+                    val isSelected = state.selectedOptionId == option.id
+                    val isCorrect = option.isCorrect
+                    
+                    val backgroundColor = when {
+                        isSelected && isCorrect -> Color(0xFF4CAF50).copy(alpha = 0.2f)
+                        isSelected && !isCorrect -> Color(0xFFF44336).copy(alpha = 0.2f)
+                        else -> CardBg
+                    }
+                    
+                    val borderColor = when {
+                        isSelected && isCorrect -> Color(0xFF4CAF50)
+                        isSelected && !isCorrect -> Color(0xFFF44336)
+                        else -> GhostWhite.copy(alpha = 0.1f)
+                    }
+
+                    Surface(
+                        onClick = { viewModel.answerQuestion(option.id) },
+                        enabled = !state.isTransitioning,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(84.dp),
+                        shape = RoundedCornerShape(24.dp),
+                        color = backgroundColor,
+                        border = BorderStroke(if (isSelected) 2.dp else 1.dp, borderColor)
+                    ) {
+                        Box(contentAlignment = Alignment.Center, modifier = Modifier.padding(horizontal = spacing.large)) {
+                            Text(
+                                text = option.text.uppercase(),
+                                style = MaterialTheme.typography.titleMedium,
+                                color = GhostWhite,
+                                textAlign = TextAlign.Center,
+                                letterSpacing = 1.sp
+                            )
+                        }
+                    }
+                }
+            }
+            
+            Spacer(Modifier.height(spacing.large))
         }
-        
-        Spacer(Modifier.height(24.dp))
     }
 }
