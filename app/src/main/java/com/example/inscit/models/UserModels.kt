@@ -18,7 +18,14 @@ data class UserProfile(
 data class UserStats(
     val xp: Int = 0,
     val level: Int = 1,
-    val quizzesTaken: Int = 0
+    val quizzesTaken: Int = 0,
+    val completedChallengeDates: Set<String> = emptySet() // Format: "yyyy-MM-dd"
+)
+
+data class DailyChallengeStatus(
+    val lastCompletionDate: String = "",
+    val currentRound: Int = 1,
+    val isCompletedToday: Boolean = false
 )
 
 data class QuizProgress(
@@ -38,7 +45,8 @@ data class UserDocument(
     val stats: UserStats = UserStats(),
     val quizProgress: QuizProgress = QuizProgress(),
     val settings: UserSettings = UserSettings(),
-    val userNotes: Map<String, UserNote> = emptyMap()
+    val userNotes: Map<String, UserNote> = emptyMap(),
+    val dailyChallengeStatus: DailyChallengeStatus = DailyChallengeStatus()
 )
 
 data class QuizAttempt(

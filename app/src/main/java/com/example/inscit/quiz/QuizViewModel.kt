@@ -29,13 +29,18 @@ class QuizViewModel(
     private val userAnswers = mutableMapOf<String, QuizOption>()
     private var currentLang: Lang = Lang.EN
 
-    fun startQuiz(lang: Lang) {
+    private var lastCount: Int = 10
+    private var lastDifficulty: String? = null
+
+    fun startQuiz(lang: Lang, count: Int = 10, difficulty: String? = null) {
         currentLang = lang
+        lastCount = count
+        lastDifficulty = difficulty
         xpBuffer.clear()
         userAnswers.clear()
         viewModelScope.launch {
             _uiState.value = QuizUiState.Loading
-            questions = engine.getQuestions(lang)
+            questions = engine.getQuestions(lang, count, difficulty)
             if (questions.isNotEmpty()) {
                 _uiState.value = QuizUiState.QuizInProgress(
                     currentQuestion = questions.first(),
@@ -85,6 +90,6 @@ class QuizViewModel(
     fun getFinalXp() = xpBuffer.pendingXp
 
     fun retry() {
-        startQuiz(currentLang)
+        startQuiz(currentLang, lastCount, lastDifficulty)
     }
 }

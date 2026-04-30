@@ -1,10 +1,11 @@
 package com.example.inscit
 
+import android.Manifest
 import android.content.ClipData
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
-import androidx.core.content.FileProvider
 import android.os.Build
 import android.os.Bundle
 import android.os.VibrationEffect
@@ -20,11 +21,14 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -32,13 +36,16 @@ import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -51,8 +58,13 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalDrawerSheet
+import androidx.compose.material3.ModalNavigationDrawer
+import androidx.compose.material3.NavigationDrawerItem
+import androidx.compose.material3.NavigationDrawerItemDefaults
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Slider
@@ -62,20 +74,26 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
+import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameMillis
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
@@ -83,10 +101,18 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
+import androidx.core.content.FileProvider
 import com.example.inscit.models.Lang
 import com.example.inscit.models.QuizProgress
 import com.example.inscit.models.ThemeMode
@@ -96,6 +122,7 @@ import com.example.inscit.models.UserNote
 import com.example.inscit.models.UserProfile
 import com.example.inscit.models.UserSettings
 import com.example.inscit.models.UserStats
+import com.example.inscit.notifications.NotificationScheduler
 import com.example.inscit.syllabus.Syllabus
 import com.example.inscit.ui.AtomIcon
 import com.example.inscit.ui.BackIcon
@@ -103,52 +130,28 @@ import com.example.inscit.ui.DNAIcon
 import com.example.inscit.ui.DrawingIcon
 import com.example.inscit.ui.ExportIcon
 import com.example.inscit.ui.FlaskIcon
+import com.example.inscit.ui.LeaderboardScreen
+import com.example.inscit.ui.MenuIcon
 import com.example.inscit.ui.NoteIcon
 import com.example.inscit.ui.ProfileImage
 import com.example.inscit.ui.SaveIcon
 import com.example.inscit.ui.ScienceQuizScreen
 import com.example.inscit.ui.ShareIcon
-import com.example.inscit.ui.SpeakerIcon
 import com.example.inscit.ui.StarIcon
 import com.example.inscit.ui.TopicDetailScreen
 import com.example.inscit.ui.TopicSelectionScreen
+import com.example.inscit.ui.TtsController
+import com.example.inscit.ui.theme.spacing
 import com.example.inscit.xp.Rank
-import androidx.compose.runtime.MutableState
-import com.example.inscit.notifications.NotificationScheduler
-import android.Manifest
-import android.content.pm.PackageManager
-import androidx.core.app.ActivityCompat
-import androidx.core.content.ContextCompat
-import androidx.compose.foundation.Image
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.unit.IntOffset
-import androidx.compose.foundation.layout.BoxWithConstraints
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.foundation.layout.offset
-import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.text.TextStyle
+import kotlinx.coroutines.launch
 import java.io.File
 import java.io.FileOutputStream
-import java.util.Locale
-import androidx.compose.material3.ModalNavigationDrawer
-import androidx.compose.material3.DrawerValue
-import androidx.compose.material3.rememberDrawerState
-import androidx.compose.material3.ModalDrawerSheet
-import androidx.compose.material3.NavigationDrawerItem
-import androidx.compose.material3.NavigationDrawerItemDefaults
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.text.font.FontFamily
-import com.example.inscit.ui.MenuIcon
 import java.text.SimpleDateFormat
 import java.util.Date
+import java.util.Locale
 import kotlin.math.cos
 import kotlin.math.sin
-import com.example.inscit.ui.LeaderboardScreen
-import kotlinx.coroutines.launch
-import com.example.inscit.ui.theme.spacing
+import java.util.Calendar
 enum class Screen {
  SPLASH, HOME, LAB, QUIZ, NOTES, THEME_CONFIG, NOTES_FOLDER, PROFILE, TOPIC_SELECTION, TOPIC_DETAIL, EXPORTS_LIST, EXPORT_DETAIL, RANKINGS, ABOUT_US, CONTACT_US, DONATE, LEADERBOARD, FEEDBACK, ACHIEVEMENTS, DAILY_QUIZ, NEWS_UPDATES, HELP_CENTER }
 enum class Branch { PHYSICS, CHEMISTRY, BIOLOGY }
@@ -231,6 +234,16 @@ fun loadUserDocument(context: Context): UserDocument {
 class TTSManager(context: Context) : TextToSpeech.OnInitListener {
     private var tts: TextToSpeech? = TextToSpeech(context, this)
     private var isReady = false
+    var isSpeaking by mutableStateOf(false)
+        private set
+
+    init {
+        tts?.setOnUtteranceProgressListener(object : android.speech.tts.UtteranceProgressListener() {
+            override fun onStart(utteranceId: String?) { isSpeaking = true }
+            override fun onDone(utteranceId: String?) { isSpeaking = false }
+            override fun onError(utteranceId: String?) { isSpeaking = false }
+        })
+    }
 
     override fun onInit(status: Int) {
         if (status == TextToSpeech.SUCCESS) {
@@ -240,11 +253,17 @@ class TTSManager(context: Context) : TextToSpeech.OnInitListener {
     }
 
     fun speak(text: String) {
-        if (isReady) tts?.speak(text, TextToSpeech.QUEUE_FLUSH, null, null)
+        if (isReady) {
+            val params = Bundle()
+            params.putString(TextToSpeech.Engine.KEY_PARAM_UTTERANCE_ID, "id")
+            tts?.speak(text, TextToSpeech.QUEUE_FLUSH, params, "id")
+            isSpeaking = true
+        }
     }
 
     fun stop() {
         tts?.stop()
+        isSpeaking = false
     }
 
     fun shutdown() {
@@ -355,7 +374,9 @@ fun serializeUserDocument(doc: UserDocument): String {
         val drawing = v.drawingData.replace(":", "\\:").replace(";", "\\;").replace("~", "\\~").replace("|", "\\|")
         "$k~~~$content~~~$drawing"
     }
-    return "${doc.profile.name}|${doc.profile.photoUrl ?: ""}|${doc.stats.xp}|${doc.stats.level}|${doc.stats.quizzesTaken}|${doc.quizProgress.lastScore}|${doc.settings.language.name}|${doc.settings.theme.name}|$notesStr"
+    val challengeDates = doc.stats.completedChallengeDates.joinToString(",")
+    val challengeStatus = "${doc.dailyChallengeStatus.lastCompletionDate},${doc.dailyChallengeStatus.currentRound},${doc.dailyChallengeStatus.isCompletedToday}"
+    return "${doc.profile.name}|${doc.profile.photoUrl ?: ""}|${doc.stats.xp}|${doc.stats.level}|${doc.stats.quizzesTaken}|${doc.quizProgress.lastScore}|${doc.settings.language.name}|${doc.settings.theme.name}|$notesStr|$challengeDates|$challengeStatus"
 }
 
 // Custom Saver for UserDocument to ensure perfect persistence
@@ -374,15 +395,31 @@ val UserDocumentSaver = Saver<UserDocument, String>(
                     k to UserNote(content, drawing)
                 }
             }
+            val challengeDates = if (parts.size > 9) parts[9].split(",").filter { it.isNotEmpty() }.toSet() else emptySet()
+            val challengeStatusParts = if (parts.size > 10) parts[10].split(",") else emptyList()
+            val challengeStatus = if (challengeStatusParts.size >= 3) {
+                com.example.inscit.models.DailyChallengeStatus(
+                    lastCompletionDate = challengeStatusParts[0],
+                    currentRound = challengeStatusParts[1].toInt(),
+                    isCompletedToday = challengeStatusParts[2].toBoolean()
+                )
+            } else com.example.inscit.models.DailyChallengeStatus()
+
             UserDocument(
                 profile = UserProfile(name = parts[0], photoUrl = parts[1].takeIf { it.isNotEmpty() }),
-                stats = UserStats(xp = parts[2].toInt(), level = parts[3].toInt(), quizzesTaken = parts[4].toInt()),
+                stats = UserStats(
+                    xp = parts[2].toInt(),
+                    level = parts[3].toInt(),
+                    quizzesTaken = parts[4].toInt(),
+                    completedChallengeDates = challengeDates
+                ),
                 quizProgress = QuizProgress(lastScore = parts[5].toFloat()),
                 settings = UserSettings(
                     language = if (parts.size > 6) Lang.valueOf(parts[6]) else Lang.EN,
                     theme = if (parts.size > 7) ThemeMode.valueOf(parts[7]) else ThemeMode.NEON
                 ),
-                userNotes = notes
+                userNotes = notes,
+                dailyChallengeStatus = challengeStatus
             )
         } catch (e: Exception) {
             UserDocument(profile = UserProfile(name = "Core Explorer"))
@@ -471,6 +508,7 @@ fun AppEngine(tts: TTSManager) {
             drawerState = drawerState,
             drawerContent = {
                 DrawerContent(
+                    userDocument = userDocument,
                     currentScreen = currentScreen,
                     onNavigate = { screen ->
                         currentScreen = screen
@@ -695,7 +733,14 @@ fun AppEngine(tts: TTSManager) {
                         Screen.LEADERBOARD -> LeaderboardScreen(onBack = { currentScreen = Screen.HOME })
                         Screen.FEEDBACK -> FeedbackScreen(primaryAccent, textColor, language) { currentScreen = Screen.HOME }
                         Screen.ACHIEVEMENTS -> AchievementsScreen(primaryAccent, textColor, language, userDocument.stats.xp) { currentScreen = Screen.HOME }
-                        Screen.DAILY_QUIZ -> DailyQuizScreen(primaryAccent, textColor, language) { currentScreen = Screen.HOME }
+                        Screen.DAILY_QUIZ -> DailyQuizScreen(
+                            userDocument = userDocument,
+                            onUpdateUser = { userDocument = it },
+                            accent = primaryAccent,
+                            txtCol = textColor,
+                            lang = language,
+                            onBack = { currentScreen = Screen.HOME }
+                        )
                         Screen.NEWS_UPDATES -> NewsUpdatesScreen(primaryAccent, textColor, language) { currentScreen = Screen.HOME }
                         Screen.HELP_CENTER -> HelpCenterScreen(primaryAccent, textColor, language) { currentScreen = Screen.HOME }
 
@@ -713,6 +758,7 @@ fun AppEngine(tts: TTSManager) {
 
 @Composable
 fun DrawerContent(
+    userDocument: UserDocument,
     currentScreen: Screen,
     onNavigate: (Screen) -> Unit,
     lang: Lang,
@@ -741,7 +787,22 @@ fun DrawerContent(
             DrawerItem(if (lang == Lang.EN) "MY RANKS" else "मेरी रैंक", Screen.RANKINGS, currentScreen, onNavigate, accent)
             DrawerItem(if (lang == Lang.EN) "ACCOUNT" else "खाता", Screen.PROFILE, currentScreen, onNavigate, accent)
             DrawerItem(if (lang == Lang.EN) "ACHIEVEMENTS" else "उपलब्धियां", Screen.ACHIEVEMENTS, currentScreen, onNavigate, accent)
-            DrawerItem(if (lang == Lang.EN) "DAILY CHALLENGE" else "दैनिक चुनौती", Screen.DAILY_QUIZ, currentScreen, onNavigate, accent)
+
+            val isChallengeDone = userDocument.dailyChallengeStatus.isCompletedToday &&
+                                 userDocument.dailyChallengeStatus.lastCompletionDate == SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())
+
+            DrawerItem(
+                label = if (lang == Lang.EN) {
+                    if (isChallengeDone) "DAILY CHALLENGE ✓" else "DAILY CHALLENGE"
+                } else {
+                    if (isChallengeDone) "दैनिक चुनौती ✓" else "दैनिक चुनौती"
+                },
+                screen = Screen.DAILY_QUIZ,
+                currentScreen = currentScreen,
+                onNavigate = onNavigate,
+                accent = accent
+            )
+
             DrawerItem(if (lang == Lang.EN) "LAB UPDATES" else "लैब अपडेट", Screen.NEWS_UPDATES, currentScreen, onNavigate, accent)
             DrawerItem(if (lang == Lang.EN) "FEEDBACK" else "फीडबैक", Screen.FEEDBACK, currentScreen, onNavigate, accent)
             DrawerItem(if (lang == Lang.EN) "HELP CENTER" else "सहायता केंद्र", Screen.HELP_CENTER, currentScreen, onNavigate, accent)
@@ -825,17 +886,199 @@ fun AchievementsScreen(accent: Color, txtCol: Color, lang: Lang, xp: Int, onBack
     }
 }
 
+
+
 @Composable
-fun DailyQuizScreen(accent: Color, txtCol: Color, lang: Lang, onBack: () -> Unit) {
-    Column(modifier = Modifier.fillMaxSize().padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-        Text("🎯", fontSize = 64.sp)
-        Spacer(Modifier.height(16.dp))
-        Text(if (lang == Lang.EN) "DAILY CHALLENGE" else "दैनिक चुनौती", fontSize = 24.sp, fontWeight = FontWeight.Black, color = txtCol)
-        Spacer(Modifier.height(8.dp))
-        Text(if (lang == Lang.EN) "Come back tomorrow for a new challenge!" else "नई चुनौती के लिए कल वापस आएं!", color = GhostWhite.copy(alpha = 0.6f))
+fun DailyQuizScreen(
+    userDocument: UserDocument,
+    onUpdateUser: (UserDocument) -> Unit,
+    accent: Color,
+    txtCol: Color,
+    lang: Lang,
+    onBack: () -> Unit
+) {
+    val today = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())
+    val status = userDocument.dailyChallengeStatus
+    val context = LocalContext.current
+
+    // Reset if it's a new day
+    LaunchedEffect(Unit) {
+        if (status.lastCompletionDate != today) {
+            onUpdateUser(userDocument.copy(
+                dailyChallengeStatus = com.example.inscit.models.DailyChallengeStatus(
+                    lastCompletionDate = status.lastCompletionDate,
+                    currentRound = 1,
+                    isCompletedToday = false
+                )
+            ))
+        }
+    }
+
+    var isQuizActive by remember { mutableStateOf(false) }
+
+    Column(modifier = Modifier.fillMaxSize().padding(24.dp).verticalScroll(rememberScrollState())) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            IconButton(onClick = onBack) { BackIcon(txtCol) }
+            Text(if (lang == Lang.EN) "DAILY CHALLENGE" else "दैनिक चुनौती", fontSize = 20.sp, fontWeight = FontWeight.Black, color = txtCol)
+        }
+
         Spacer(Modifier.height(32.dp))
-        Button(onClick = onBack, colors = ButtonDefaults.buttonColors(containerColor = accent)) {
-            Text("RETURN HOME", color = DeepSpace)
+
+        if (status.isCompletedToday && status.lastCompletionDate == today) {
+            Box(Modifier.fillMaxWidth().height(120.dp).background(accent.copy(alpha = 0.1f), RoundedCornerShape(24.dp)), contentAlignment = Alignment.Center) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text("✓", fontSize = 48.sp, color = accent)
+                    Text(if (lang == Lang.EN) "CHALLENGE COMPLETED" else "चुनौती पूरी हुई", fontWeight = FontWeight.Bold, color = accent)
+                }
+            }
+        } else {
+            RoundCard(1, 5, status.currentRound >= 1, status.currentRound == 1, accent)
+            Spacer(Modifier.height(16.dp))
+            RoundCard(2, 10, status.currentRound >= 2, status.currentRound == 2, accent)
+            Spacer(Modifier.height(16.dp))
+            RoundCard(3, 15, status.currentRound >= 3, status.currentRound == 3, accent)
+
+            Spacer(Modifier.height(32.dp))
+
+            Button(
+                onClick = { isQuizActive = true },
+                modifier = Modifier.fillMaxWidth().height(60.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = accent, contentColor = DeepSpace)
+            ) {
+                Text(if (lang == Lang.EN) "START ROUND ${status.currentRound}" else "राउंड ${status.currentRound} शुरू करें", fontWeight = FontWeight.ExtraBold)
+            }
+        }
+
+        Spacer(Modifier.height(48.dp))
+
+        Text(if (lang == Lang.EN) "CHALLENGE HISTORY" else "चुनौती इतिहास", fontWeight = FontWeight.Black, color = accent, fontSize = 14.sp)
+        Spacer(Modifier.height(16.dp))
+
+        DailyChallengeCalendar(userDocument.stats.completedChallengeDates, accent)
+    }
+
+    if (isQuizActive) {
+        val qCount = when(status.currentRound) {
+            1 -> 5
+            2 -> 10
+            else -> 15
+        }
+        
+        val buttonLabel = if (status.currentRound < 3) {
+            if (lang == Lang.EN) "NEXT ROUND" else "अगला राउंड"
+        } else {
+            if (lang == Lang.EN) "COMPLETE CHALLENGE" else "चुनौती पूरी करें"
+        }
+
+        key(status.currentRound) {
+            ScienceQuizScreen(
+                lang = lang,
+                accent = accent,
+                customQuestionCount = qCount,
+                difficultyFilter = "INTERMEDIATE",
+                finishButtonLabel = buttonLabel,
+                onFinish = { xp, score, _, _ ->
+                    if (score >= 70) {
+                        if (status.currentRound < 3) {
+                            onUpdateUser(userDocument.copy(
+                                dailyChallengeStatus = status.copy(currentRound = status.currentRound + 1),
+                                stats = userDocument.stats.copy(xp = userDocument.stats.xp + xp)
+                            ))
+                            triggerVibration(context, "SUCCESS")
+                            // key(status.currentRound) will handle the restart
+                        } else {
+                            val newDates = userDocument.stats.completedChallengeDates.toMutableSet()
+                            newDates.add(today)
+                            onUpdateUser(userDocument.copy(
+                                dailyChallengeStatus = status.copy(isCompletedToday = true, lastCompletionDate = today),
+                                stats = userDocument.stats.copy(xp = userDocument.stats.xp + xp, completedChallengeDates = newDates)
+                            ))
+                            triggerVibration(context, "SUCCESS")
+                            isQuizActive = false
+                        }
+                    } else {
+                        triggerVibration(context, "CLICK")
+                        isQuizActive = false // Fail = Back to Challenge screen
+                    }
+                }
+            )
+        }
+    }
+}
+
+@Composable
+fun RoundCard(round: Int, qCount: Int, isUnlocked: Boolean, isCurrent: Boolean, accent: Color) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        color = if (isCurrent) accent.copy(alpha = 0.1f) else CardBg,
+        border = BorderStroke(1.dp, if (isCurrent) accent else if (isUnlocked) accent.copy(alpha = 0.3f) else GhostWhite.copy(alpha = 0.05f))
+    ) {
+        Row(Modifier.padding(20.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(if (isUnlocked) "●" else "○", color = if (isUnlocked) accent else GhostWhite.copy(alpha = 0.3f))
+            Spacer(Modifier.width(16.dp))
+            Column {
+                Text("ROUND $round", fontWeight = FontWeight.Black, color = if (isUnlocked) GhostWhite else GhostWhite.copy(alpha = 0.3f))
+                Text("$qCount QUESTIONS • INTERMEDIATE", fontSize = 10.sp, color = accent)
+            }
+            Spacer(Modifier.weight(1f))
+            if (isCurrent) Text("ACTIVE", fontSize = 10.sp, fontWeight = FontWeight.Black, color = accent)
+        }
+    }
+}
+
+@Composable
+fun DailyChallengeCalendar(completedDates: Set<String>, accent: Color) {
+    val cal = Calendar.getInstance()
+    val currentMonth = cal.get(Calendar.MONTH)
+    val currentYear = cal.get(Calendar.YEAR)
+
+    cal.set(Calendar.DAY_OF_MONTH, 1)
+    val firstDayOfWeek = cal.get(Calendar.DAY_OF_WEEK) - 1
+    val daysInMonth = cal.getActualMaximum(Calendar.DAY_OF_MONTH)
+
+    Column(Modifier.fillMaxWidth().background(CardBg, RoundedCornerShape(24.dp)).padding(16.dp)) {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            Text(SimpleDateFormat("MMMM yyyy", Locale.US).format(cal.time).uppercase(), fontWeight = FontWeight.Black, fontSize = 12.sp, color = GhostWhite)
+        }
+
+        Spacer(Modifier.height(16.dp))
+
+        val days = listOf("S", "M", "T", "W", "T", "F", "S")
+        Row(Modifier.fillMaxWidth()) {
+            days.forEach { day ->
+                Text(day, modifier = Modifier.weight(1f), textAlign = TextAlign.Center, fontSize = 10.sp, color = GhostWhite.copy(alpha = 0.3f), fontWeight = FontWeight.Bold)
+            }
+        }
+
+        Spacer(Modifier.height(8.dp))
+
+        var dayCounter = 1
+        for (row in 0..5) {
+            Row(Modifier.fillMaxWidth()) {
+                for (col in 0..6) {
+                    val isWithinMonth = (row > 0 || col >= firstDayOfWeek) && dayCounter <= daysInMonth
+                    Box(Modifier.weight(1f).aspectRatio(1f), contentAlignment = Alignment.Center) {
+                        if (isWithinMonth) {
+                            val dateStr = String.format(Locale.US, "%d-%02d-%02d", currentYear, currentMonth + 1, dayCounter)
+                            val isCompleted = completedDates.contains(dateStr)
+
+                            if (isCompleted) {
+                                Box(Modifier.size(24.dp).background(accent, CircleShape))
+                            }
+
+                            Text(
+                                dayCounter.toString(),
+                                fontSize = 12.sp,
+                                fontWeight = if (isCompleted) FontWeight.Black else FontWeight.Normal,
+                                color = if (isCompleted) DeepSpace else GhostWhite
+                            )
+                            dayCounter++
+                        }
+                    }
+                }
+            }
+            if (dayCounter > daysInMonth) break
         }
     }
 }
@@ -1081,13 +1324,9 @@ fun LabScreen(
                 fontSize = 14.sp, fontWeight = FontWeight.Bold, color = accent
             )
             Spacer(Modifier.width(8.dp))
-            IconButton(onClick = {
-                val text = if (lang == Lang.EN) "Access the detailed scientific syllabus and interactive modules."
+            val labText = if (lang == Lang.EN) "Access the detailed scientific syllabus and interactive modules."
                           else "विस्तृत वैज्ञानिक पाठ्यक्रम और इंटरैक्टिव मॉड्यूल तक पहुंचें।"
-                tts.speak(text)
-            }, modifier = Modifier.size(20.dp)) {
-                SpeakerIcon(accent, Modifier.size(16.dp))
-            }
+            TtsController(labText, tts, accent, iconSize = 16.dp)
         }
 
         Spacer(Modifier.height(20.dp))
@@ -1371,9 +1610,7 @@ fun NotesScreen(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(note.title, color = accent, fontWeight = FontWeight.Black, fontSize = 14.sp, letterSpacing = 1.sp)
-                            IconButton(onClick = { tts.speak(note.content) }, modifier = Modifier.size(24.dp)) {
-                                SpeakerIcon(accent, Modifier.size(18.dp))
-                            }
+                            TtsController(note.content, tts, accent, iconSize = 18.dp)
                         }
                         Spacer(Modifier.height(12.dp))
                         Text(note.content, color = GhostWhite.copy(alpha = 0.8f), fontSize = 15.sp, lineHeight = 24.sp)
@@ -1610,7 +1847,7 @@ fun IosSlider(
                 },
             contentAlignment = Alignment.Center
         ) {
-            Text("→", color = Color.Black, fontSize = 24.sp, fontWeight = FontWeight.ExtraBold)
+            Box(Modifier.size(38.dp).background(color = CardBg, CircleShape))
         }
     }
 }
@@ -1619,14 +1856,26 @@ fun IosSlider(
 fun FullSplashScreen(accent: Color, onExplore: () -> Unit) {
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         HexagonGrid(accent.copy(alpha = 0.08f))
+        
+        Text(
+            "OMEGA CORE V9.0", 
+            color = accent.copy(alpha = 0.4f), 
+            fontSize = 10.sp, 
+            fontWeight = FontWeight.Medium,
+            letterSpacing = 2.sp,
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(24.dp)
+        )
+
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
             Image(
                 painter = painterResource(id = R.drawable.app_logo),
                 contentDescription = "App Logo",
-                modifier = Modifier.size(160.dp)
+                modifier = Modifier
+                    .size(160.dp)
+                    .clip(RoundedCornerShape(32.dp))
             )
-            Spacer(Modifier.height(16.dp))
-            Text("OMEGA CORE V9.0", color = accent, fontSize = 14.sp, fontWeight = FontWeight.Bold, letterSpacing = 4.sp)
             Spacer(Modifier.height(80.dp))
             IosSlider(
                 onSwipeComplete = onExplore,

@@ -3,11 +3,20 @@ package com.example.inscit.quiz
 import com.example.inscit.models.Lang
 
 class QuizEngine {
-    fun getQuestions(lang: Lang): List<ScienceQuestion> {
-        return when (lang) {
+    fun getQuestions(
+        lang: Lang, 
+        count: Int = 10, 
+        difficulty: String? = null
+    ): List<ScienceQuestion> {
+        val all = when (lang) {
             Lang.HI -> getHindiQuestions()
             else -> getEnglishQuestions()
-        }.shuffled()
+        }
+        val filtered = if (difficulty != null) {
+            all.filter { it.difficulty == difficulty }
+        } else all
+
+        return filtered.shuffled().take(count)
     }
 
     fun calculateAnalytics(
@@ -218,6 +227,114 @@ class QuizEngine {
             text = "Mitochondria produce ATP only?",
             options = listOf(QuizOption(1, "True", false), QuizOption(2, "False", true)),
             explanation = "Mitochondria also regulate calcium, synthesize heme, and signaling."
+        ),
+        // INTERMEDIATE QUESTIONS - Physics
+        ScienceQuestion(
+            id = "ip1", domain = ScienceDomain.PHYSICS,
+            text = "Escape velocity from Earth is independent of the mass of the object?",
+            options = listOf(QuizOption(1, "True", true), QuizOption(2, "False", false)),
+            explanation = "v = sqrt(2GM/R). It only depends on the planet's mass and radius.",
+            difficulty = "INTERMEDIATE"
+        ),
+        ScienceQuestion(
+            id = "ip2", domain = ScienceDomain.PHYSICS,
+            text = "Entropy of an isolated system can decrease over time?",
+            options = listOf(QuizOption(1, "True", false), QuizOption(2, "False", true)),
+            explanation = "Second Law of Thermodynamics states entropy always increases or remains constant.",
+            difficulty = "INTERMEDIATE"
+        ),
+        ScienceQuestion(
+            id = "ip3", domain = ScienceDomain.PHYSICS,
+            text = "A p-type semiconductor has holes as majority carriers?",
+            options = listOf(QuizOption(1, "True", true), QuizOption(2, "False", false)),
+            explanation = "P-type (Positive) semiconductors are doped to create an excess of holes.",
+            difficulty = "INTERMEDIATE"
+        ),
+        ScienceQuestion(
+            id = "ip4", domain = ScienceDomain.PHYSICS,
+            text = "Lenz's Law is a consequence of the law of conservation of energy?",
+            options = listOf(QuizOption(1, "True", true), QuizOption(2, "False", false)),
+            explanation = "The induced current opposes the change to conserve energy.",
+            difficulty = "INTERMEDIATE"
+        ),
+        ScienceQuestion(
+            id = "ip5", domain = ScienceDomain.PHYSICS,
+            text = "The speed of sound is faster in water than in air?",
+            options = listOf(QuizOption(1, "True", true), QuizOption(2, "False", false)),
+            explanation = "Sound travels faster in denser, less compressible media.",
+            difficulty = "INTERMEDIATE"
+        ),
+        // INTERMEDIATE QUESTIONS - Chemistry
+        ScienceQuestion(
+            id = "ic1", domain = ScienceDomain.CHEMISTRY,
+            text = "Noble gases have the highest electronegativity in their period?",
+            options = listOf(QuizOption(1, "True", false), QuizOption(2, "False", true)),
+            explanation = "Noble gases generally have zero electronegativity as they have full shells.",
+            difficulty = "INTERMEDIATE"
+        ),
+        ScienceQuestion(
+            id = "ic2", domain = ScienceDomain.CHEMISTRY,
+            text = "A buffer solution resists change in pH when small amounts of acid/base are added?",
+            options = listOf(QuizOption(1, "True", true), QuizOption(2, "False", false)),
+            explanation = "Buffers contain both weak acid/base and its conjugate to neutralize additions.",
+            difficulty = "INTERMEDIATE"
+        ),
+        ScienceQuestion(
+            id = "ic3", domain = ScienceDomain.CHEMISTRY,
+            text = "The hybridization of Carbon in Ethene (C2H4) is sp3?",
+            options = listOf(QuizOption(1, "True", false), QuizOption(2, "False", true)),
+            explanation = "Carbon in Ethene is sp2 hybridized due to the double bond.",
+            difficulty = "INTERMEDIATE"
+        ),
+        ScienceQuestion(
+            id = "ic4", domain = ScienceDomain.CHEMISTRY,
+            text = "Endothermic reactions have a negative Change in Enthalpy (ΔH)?",
+            options = listOf(QuizOption(1, "True", false), QuizOption(2, "False", true)),
+            explanation = "Endothermic reactions absorb heat, so ΔH is positive.",
+            difficulty = "INTERMEDIATE"
+        ),
+        ScienceQuestion(
+            id = "ic5", domain = ScienceDomain.CHEMISTRY,
+            text = "Activation energy is the minimum energy required to start a reaction?",
+            options = listOf(QuizOption(1, "True", true), QuizOption(2, "False", false)),
+            explanation = "It is the energy barrier that must be overcome for reactants to become products.",
+            difficulty = "INTERMEDIATE"
+        ),
+        // INTERMEDIATE QUESTIONS - Biology
+        ScienceQuestion(
+            id = "ib1", domain = ScienceDomain.BIOLOGY,
+            text = "Meiosis results in four genetically identical daughter cells?",
+            options = listOf(QuizOption(1, "True", false), QuizOption(2, "False", true)),
+            explanation = "Meiosis results in four genetically unique haploid cells.",
+            difficulty = "INTERMEDIATE"
+        ),
+        ScienceQuestion(
+            id = "ib2", domain = ScienceDomain.BIOLOGY,
+            text = "Enzymes increase activation energy to speed up reactions?",
+            options = listOf(QuizOption(1, "True", false), QuizOption(2, "False", true)),
+            explanation = "Enzymes lower the activation energy.",
+            difficulty = "INTERMEDIATE"
+        ),
+        ScienceQuestion(
+            id = "ib3", domain = ScienceDomain.BIOLOGY,
+            text = "The primary structure of a protein is its sequence of amino acids?",
+            options = listOf(QuizOption(1, "True", true), QuizOption(2, "False", false)),
+            explanation = "Primary structure is the linear chain of amino acids.",
+            difficulty = "INTERMEDIATE"
+        ),
+        ScienceQuestion(
+            id = "ib4", domain = ScienceDomain.BIOLOGY,
+            text = "Stomata close during the night to prevent water loss?",
+            options = listOf(QuizOption(1, "True", true), QuizOption(2, "False", false)),
+            explanation = "Closing stomata reduces transpiration when photosynthesis is not occurring.",
+            difficulty = "INTERMEDIATE"
+        ),
+        ScienceQuestion(
+            id = "ib5", domain = ScienceDomain.BIOLOGY,
+            text = "Active transport requires cellular energy (ATP)?",
+            options = listOf(QuizOption(1, "True", true), QuizOption(2, "False", false)),
+            explanation = "Active transport moves molecules against a concentration gradient using energy.",
+            difficulty = "INTERMEDIATE"
         )
     )
 
@@ -375,6 +492,114 @@ class QuizEngine {
             text = "मािटोकॉन्ड्रिया केवल ATP उत्पन्न करते हैं?",
             options = listOf(QuizOption(1, "सही", false), QuizOption(2, "गलत", true)),
             explanation = "ATP संश्लेषण के साथ, माइटोकॉन्ड्रिया अन्य कोशिकीय कार्यों को भी नियंत्रित करते हैं।"
+        ),
+        // INTERMEDIATE QUESTIONS - Physics
+        ScienceQuestion(
+            id = "ip1", domain = ScienceDomain.PHYSICS,
+            text = "पृथ्वी से पलायन वेग वस्तु के द्रव्यमान पर निर्भर नहीं करता है?",
+            options = listOf(QuizOption(1, "सही", true), QuizOption(2, "गलत", false)),
+            explanation = "यह केवल ग्रह के द्रव्यमान और त्रिज्या पर निर्भर करता है।",
+            difficulty = "INTERMEDIATE"
+        ),
+        ScienceQuestion(
+            id = "ip2", domain = ScienceDomain.PHYSICS,
+            text = "एक अलग प्रणाली की एन्ट्रॉपी समय के साथ घट सकती है?",
+            options = listOf(QuizOption(1, "सही", false), QuizOption(2, "गलत", true)),
+            explanation = "ऊष्मप्रवैगिकी का दूसरा नियम कहता है कि एन्ट्रॉपी हमेशा बढ़ती है या स्थिर रहती है।",
+            difficulty = "INTERMEDIATE"
+        ),
+        ScienceQuestion(
+            id = "ip3", domain = ScienceDomain.PHYSICS,
+            text = "एक p-प्रकार के अर्धचालक में बहुसंख्यक वाहक के रूप में छिद्र (holes) होते हैं?",
+            options = listOf(QuizOption(1, "सही", true), QuizOption(2, "गलत", false)),
+            explanation = "P-प्रकार के अर्धचालकों को छिद्रों की अधिकता बनाने के लिए डोप किया जाता है।",
+            difficulty = "INTERMEDIATE"
+        ),
+        ScienceQuestion(
+            id = "ip4", domain = ScienceDomain.PHYSICS,
+            text = "लेंज का नियम ऊर्जा संरक्षण के नियम का परिणाम है?",
+            options = listOf(QuizOption(1, "सही", true), QuizOption(2, "गलत", false)),
+            explanation = "प्रेरित धारा ऊर्जा बचाने के लिए परिवर्तन का विरोध करती है।",
+            difficulty = "INTERMEDIATE"
+        ),
+        ScienceQuestion(
+            id = "ip5", domain = ScienceDomain.PHYSICS,
+            text = "ध्वनि की गति हवा की तुलना में पानी में तेज होती है?",
+            options = listOf(QuizOption(1, "सही", true), QuizOption(2, "गलत", false)),
+            explanation = "ध्वनि सघन माध्यमों में तेजी से यात्रा करती है।",
+            difficulty = "INTERMEDIATE"
+        ),
+        // INTERMEDIATE QUESTIONS - Chemistry
+        ScienceQuestion(
+            id = "ic1", domain = ScienceDomain.CHEMISTRY,
+            text = "महान गैसों की अपनी अवधि में उच्चतम वैद्युतीयऋणात्मकता होती है?",
+            options = listOf(QuizOption(1, "सही", false), QuizOption(2, "गलत", true)),
+            explanation = "महान गैसों की वैद्युतीयऋणात्मकता आम तौर पर शून्य होती है।",
+            difficulty = "INTERMEDIATE"
+        ),
+        ScienceQuestion(
+            id = "ic2", domain = ScienceDomain.CHEMISTRY,
+            text = "एक बफर समाधान पीएच में परिवर्तन का प्रतिरोध करता है?",
+            options = listOf(QuizOption(1, "सही", true), QuizOption(2, "गलत", false)),
+            explanation = "बफर में एसिड और बेस दोनों होते हैं जो बाहरी प्रभाव को बेअसर करते हैं।",
+            difficulty = "INTERMEDIATE"
+        ),
+        ScienceQuestion(
+            id = "ic3", domain = ScienceDomain.CHEMISTRY,
+            text = "एथीन (C2H4) में कार्बन का संकरण sp3 है?",
+            options = listOf(QuizOption(1, "सही", false), QuizOption(2, "गलत", true)),
+            explanation = "एथीन में कार्बन sp2 संकरित होता है।",
+            difficulty = "INTERMEDIATE"
+        ),
+        ScienceQuestion(
+            id = "ic4", domain = ScienceDomain.CHEMISTRY,
+            text = "एंडोथर्मिक प्रतिक्रियाओं में एन्थैल्पी (ΔH) में नकारात्मक परिवर्तन होता है?",
+            options = listOf(QuizOption(1, "सही", false), QuizOption(2, "गलत", true)),
+            explanation = "एंडोथर्मिक प्रतिक्रियाएं गर्मी सोखती हैं, इसलिए ΔH सकारात्मक होता है।",
+            difficulty = "INTERMEDIATE"
+        ),
+        ScienceQuestion(
+            id = "ic5", domain = ScienceDomain.CHEMISTRY,
+            text = "सक्रियण ऊर्जा प्रतिक्रिया शुरू करने के लिए आवश्यक न्यूनतम ऊर्जा है?",
+            options = listOf(QuizOption(1, "सही", true), QuizOption(2, "गलत", false)),
+            explanation = "यह वह ऊर्जा बाधा है जिसे प्रतिक्रिया शुरू करने के लिए पार करना होगा।",
+            difficulty = "INTERMEDIATE"
+        ),
+        // INTERMEDIATE QUESTIONS - Biology
+        ScienceQuestion(
+            id = "ib1", domain = ScienceDomain.BIOLOGY,
+            text = "अर्धसूत्रीविभाजन के परिणामस्वरूप चार आनुवंशिक रूप से समान कोशिकाएं बनती हैं?",
+            options = listOf(QuizOption(1, "सही", false), QuizOption(2, "गलत", true)),
+            explanation = "अर्धसूत्रीविभाजन से चार अद्वितीय अगुणित कोशिकाएं बनती हैं।",
+            difficulty = "INTERMEDIATE"
+        ),
+        ScienceQuestion(
+            id = "ib2", domain = ScienceDomain.BIOLOGY,
+            text = "एंजाइम प्रतिक्रियाओं को तेज करने के लिए सक्रियण ऊर्जा बढ़ाते हैं?",
+            options = listOf(QuizOption(1, "सही", false), QuizOption(2, "गलत", true)),
+            explanation = "एंजाइम सक्रियण ऊर्जा को कम करते हैं।",
+            difficulty = "INTERMEDIATE"
+        ),
+        ScienceQuestion(
+            id = "ib3", domain = ScienceDomain.BIOLOGY,
+            text = "प्रोटीन की प्राथमिक संरचना अमीनो एसिड का अनुक्रम है?",
+            options = listOf(QuizOption(1, "सही", true), QuizOption(2, "गलत", false)),
+            explanation = "प्राथमिक संरचना अमीनो एसिड की रैखिक श्रृंखला है।",
+            difficulty = "INTERMEDIATE"
+        ),
+        ScienceQuestion(
+            id = "ib4", domain = ScienceDomain.BIOLOGY,
+            text = "पानी की कमी को रोकने के लिए रात में रंध्र (stomata) बंद हो जाते हैं?",
+            options = listOf(QuizOption(1, "सही", true), QuizOption(2, "गलत", false)),
+            explanation = "रंध्र बंद होने से वाष्पोत्सर्जन कम हो जाता है।",
+            difficulty = "INTERMEDIATE"
+        ),
+        ScienceQuestion(
+            id = "ib5", domain = ScienceDomain.BIOLOGY,
+            text = "सक्रिय परिवहन के लिए कोशिकीय ऊर्जा (ATP) की आवश्यकता होती है?",
+            options = listOf(QuizOption(1, "सही", true), QuizOption(2, "गलत", false)),
+            explanation = "सक्रिय परिवहन ऊर्जा का उपयोग करके अणुओं को उच्च सांद्रता की ओर ले जाता है।",
+            difficulty = "INTERMEDIATE"
         )
     )
 }

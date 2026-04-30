@@ -81,13 +81,9 @@ fun TopicSelectionScreen(
                         textAlign = TextAlign.Start,
                         modifier = Modifier.weight(1f)
                     )
-                    IconButton(onClick = {
-                        val text = if (lang == Lang.EN) "Select a specialized module to explore detailed scientific concepts and interactive simulations."
-                        else "विस्तृत वैज्ञानिक अवधारणाओं और इंटरैक्टिव सिमुलेशन का पता लगाने के लिए एक विशेष मॉड्यूल चुनें।"
-                        tts.speak(text)
-                    }) {
-                        SpeakerIcon(accent, Modifier.size(24.dp))
-                    }
+                    val selectText = if (lang == Lang.EN) "Select a specialized module to explore detailed scientific concepts and interactive simulations."
+                    else "विस्तृत वैज्ञानिक अवधारणाओं और इंटरैक्टिव सिमुलेशन का पता लगाने के लिए एक विशेष मॉड्यूल चुनें।"
+                    TtsController(selectText, tts, accent, iconSize = 24.dp)
                 }
             }
 
@@ -214,9 +210,7 @@ fun TopicDetailScreen(
                                     style = MaterialTheme.typography.labelMedium,
                                     letterSpacing = 2.sp
                                 )
-                                IconButton(onClick = { tts.speak(para) }, modifier = Modifier.size(32.dp)) {
-                                    SpeakerIcon(accent, Modifier.size(24.dp))
-                                }
+                                TtsController(para, tts, accent, iconSize = 24.dp)
                             }
                             Spacer(Modifier.height(spacing.medium))
                             Text(

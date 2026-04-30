@@ -33,6 +33,7 @@ fun ScienceResultScreen(
     analytics: ScienceAnalytics,
     lang: Lang,
     accent: Color,
+    finishButtonLabel: String? = null,
     onRetry: () -> Unit,
     onFinish: () -> Unit
 ) {
@@ -141,7 +142,10 @@ fun ScienceResultScreen(
                     border = BorderStroke(2.dp, accent),
                     colors = ButtonDefaults.outlinedButtonColors(contentColor = accent)
                 ) {
-                    Text(if (lang == Lang.EN) "BACK TO HUB" else "हब पर वापस जाएं", style = MaterialTheme.typography.titleMedium)
+                    Text(
+                        text = finishButtonLabel ?: (if (lang == Lang.EN) "BACK TO HUB" else "हब पर वापस जाएं"),
+                        style = MaterialTheme.typography.titleMedium
+                    )
                 }
                 Spacer(Modifier.height(spacing.huge))
             }

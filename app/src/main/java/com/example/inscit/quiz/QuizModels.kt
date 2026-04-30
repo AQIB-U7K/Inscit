@@ -25,7 +25,8 @@ data class ScienceQuestion(
     val text: String,
     val options: List<QuizOption>,
     val weight: Float = 1.0f,
-    val explanation: String
+    val explanation: String,
+    val difficulty: String = "BASIC"
 )
 
 @Immutable

@@ -28,6 +28,26 @@ import com.example.inscit.models.TopicDetail
 import kotlin.math.*
 
 @Composable
+fun TtsController(
+    text: String,
+    tts: TTSManager,
+    accent: Color,
+    iconSize: androidx.compose.ui.unit.Dp = 24.dp
+) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        IconButton(onClick = {
+            if (tts.isSpeaking) tts.stop() else tts.speak(text)
+        }, modifier = Modifier.size(iconSize + 8.dp)) {
+            if (tts.isSpeaking) {
+                StopIcon(accent, Modifier.size(iconSize))
+            } else {
+                SpeakerIcon(accent, Modifier.size(iconSize))
+            }
+        }
+    }
+}
+
+@Composable
 fun InteractionControlPanel(
     accent: Color,
     content: @Composable ColumnScope.() -> Unit

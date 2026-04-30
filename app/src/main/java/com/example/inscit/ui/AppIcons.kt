@@ -299,6 +299,25 @@ fun NoteIcon(color: Color, modifier: Modifier = Modifier.size(24.dp)) {
 }
 
 @Composable
+fun PauseIcon(color: Color, modifier: Modifier = Modifier.size(24.dp)) {
+    Canvas(modifier = modifier) {
+        val w = size.width
+        val h = size.height
+        drawLine(color, Offset(w * 0.35f, h * 0.2f), Offset(w * 0.35f, h * 0.8f), strokeWidth = 4.dp.toPx(), cap = StrokeCap.Round)
+        drawLine(color, Offset(w * 0.65f, h * 0.2f), Offset(w * 0.65f, h * 0.8f), strokeWidth = 4.dp.toPx(), cap = StrokeCap.Round)
+    }
+}
+
+@Composable
+fun StopIcon(color: Color, modifier: Modifier = Modifier.size(24.dp)) {
+    Canvas(modifier = modifier) {
+        val w = size.width
+        val h = size.height
+        drawRoundRect(color, topLeft = Offset(w * 0.25f, h * 0.25f), size = Size(w * 0.5f, h * 0.5f), cornerRadius = CornerRadius(2.dp.toPx(), 2.dp.toPx()))
+    }
+}
+
+@Composable
 fun SpeakerIcon(color: Color, modifier: Modifier = Modifier.size(24.dp)) {
     Canvas(modifier = modifier) {
         val w = size.width

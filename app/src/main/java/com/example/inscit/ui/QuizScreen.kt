@@ -32,6 +32,9 @@ import com.example.inscit.ui.theme.spacing
 fun ScienceQuizScreen(
     lang: Lang,
     accent: Color,
+    customQuestionCount: Int = 10,
+    difficultyFilter: String? = null,
+    finishButtonLabel: String? = null,
     onFinish: (xpEarned: Int, score: Int, strengths: List<String>, weaknesses: List<String>) -> Unit,
     viewModel: QuizViewModel = viewModel<QuizViewModel>()
 ) {
@@ -40,7 +43,7 @@ fun ScienceQuizScreen(
     val spacing = MaterialTheme.spacing
 
     LaunchedEffect(Unit) {
-        viewModel.startQuiz(lang)
+        viewModel.startQuiz(lang, customQuestionCount, difficultyFilter)
         viewModel.events.collectLatest { event ->
             when (event) {
                 is QuizEvent.TriggerVibration -> triggerVibration(context, event.type)
@@ -64,6 +67,7 @@ fun ScienceQuizScreen(
                     analytics = currentState.analytics,
                     lang = lang,
                     accent = accent,
+                    finishButtonLabel = finishButtonLabel,
                     onRetry = viewModel::retry,
                     onFinish = {
                         onFinish(
