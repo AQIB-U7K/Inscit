@@ -21,10 +21,12 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
@@ -128,11 +130,13 @@ import com.example.inscit.ui.AtomIcon
 import com.example.inscit.ui.BackIcon
 import com.example.inscit.ui.DNAIcon
 import com.example.inscit.ui.DrawingIcon
+import com.example.inscit.ui.EmailIcon
 import com.example.inscit.ui.ExportIcon
 import com.example.inscit.ui.FlaskIcon
 import com.example.inscit.ui.LeaderboardScreen
 import com.example.inscit.ui.MenuIcon
 import com.example.inscit.ui.NoteIcon
+import com.example.inscit.ui.PhoneIcon
 import com.example.inscit.ui.ProfileImage
 import com.example.inscit.ui.SaveIcon
 import com.example.inscit.ui.ScienceQuizScreen
@@ -141,6 +145,7 @@ import com.example.inscit.ui.StarIcon
 import com.example.inscit.ui.TopicDetailScreen
 import com.example.inscit.ui.TopicSelectionScreen
 import com.example.inscit.ui.TtsController
+import com.example.inscit.ui.WebIcon
 import com.example.inscit.ui.theme.spacing
 import com.example.inscit.xp.Rank
 import kotlinx.coroutines.launch
@@ -1180,7 +1185,8 @@ fun AboutUsScreen(accent: Color, txtCol: Color, lang: Lang, onBack: () -> Unit) 
 
 @Composable
 fun ContactUsScreen(accent: Color, txtCol: Color, lang: Lang, onBack: () -> Unit) {
-    Column(modifier = Modifier.fillMaxSize().padding(24.dp)) {
+    val context = LocalContext.current
+    Column(modifier = Modifier.fillMaxSize().padding(24.dp).verticalScroll(rememberScrollState())) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onBack) { BackIcon(txtCol) }
             Text(if (lang == Lang.EN) "CONTACT US" else "संपर्क करें", fontSize = 20.sp, fontWeight = FontWeight.Black, color = txtCol)
@@ -1188,21 +1194,94 @@ fun ContactUsScreen(accent: Color, txtCol: Color, lang: Lang, onBack: () -> Unit
         Spacer(Modifier.height(32.dp))
         Text(if (lang == Lang.EN) "GET IN TOUCH" else "संपर्क में रहें", fontWeight = FontWeight.Bold, color = accent)
         Spacer(Modifier.height(16.dp))
-        ContactItem(if (lang == Lang.EN) "Email: support@inscit.com" else "ईमेल: support@inscit.com")
-        ContactItem(if (lang == Lang.EN) "Twitter: @InscitApp" else "ट्विटर: @InscitApp")
-        ContactItem(if (lang == Lang.EN) "Website: www.inscit.com" else "वेबसाइट: www.inscit.com")
+        
+        ContactItem(
+            icon = { EmailIcon(it) },
+            label = if (lang == Lang.EN) "FRONTEND & UI ISSUES" else "फ्रंटएंड और यूआई मुद्दे",
+            value = "aqibm5m488@gmail.com",
+            accent = accent,
+            onClick = {
+                val intent = Intent(Intent.ACTION_SENDTO).apply {
+                    data = Uri.parse("mailto:aqibm5m488@gmail.com")
+                }
+                context.startActivity(intent)
+            }
+        )
+
+        ContactItem(
+            icon = { EmailIcon(it) },
+            label = if (lang == Lang.EN) "ACCOUNT & CLOUD ISSUES" else "खाता और क्लाउड मुद्दे",
+            value = "jaiswalaman7138@gmail.com",
+            accent = accent,
+            onClick = {
+                val intent = Intent(Intent.ACTION_SENDTO).apply {
+                    data = Uri.parse("mailto:jaiswalaman7138@gmail.com")
+                }
+                context.startActivity(intent)
+            }
+        )
+
+        ContactItem(
+            icon = { PhoneIcon(it) },
+            label = if (lang == Lang.EN) "CONTACT NUMBER" else "संपर्क नंबर",
+            value = "8104878086",
+            accent = accent,
+            onClick = {
+                val intent = Intent(Intent.ACTION_DIAL).apply {
+                    data = Uri.parse("tel:8104878086")
+                }
+                context.startActivity(intent)
+            }
+        )
+
+        ContactItem(
+            icon = { WebIcon(it) },
+            label = if (lang == Lang.EN) "WEBSITE URL" else "वेबसाइट यूआरएल",
+            value = "www.inscit.com",
+            accent = accent,
+            onClick = {
+                val intent = Intent(Intent.ACTION_VIEW).apply {
+                    data = Uri.parse("https://www.inscit.com")
+                }
+                context.startActivity(intent)
+            }
+        )
     }
 }
 
 @Composable
-fun ContactItem(text: String) {
+fun ContactItem(
+    icon: @Composable (Color) -> Unit,
+    label: String,
+    value: String,
+    accent: Color,
+    onClick: () -> Unit
+) {
     Surface(
+        onClick = onClick,
         modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(16.dp),
         color = CardBg,
         border = BorderStroke(1.dp, GhostWhite.copy(alpha = 0.05f))
     ) {
-        Text(text, modifier = Modifier.padding(16.dp), color = GhostWhite)
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .background(accent.copy(alpha = 0.1f), CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                icon(accent)
+            }
+            Spacer(Modifier.width(16.dp))
+            Column {
+                Text(label, fontSize = 10.sp, fontWeight = FontWeight.Bold, color = accent, letterSpacing = 1.sp)
+                Text(value, fontSize = 15.sp, fontWeight = FontWeight.Medium, color = GhostWhite)
+            }
+        }
     }
 }
 
@@ -1799,7 +1878,10 @@ fun IosSlider(
     val swipeThreshold = 0.85f
     val animatedDragOffset by animateFloatAsState(
         targetValue = dragOffset,
-        animationSpec = tween(durationMillis = 200),
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioLowBouncy,
+            stiffness = Spring.StiffnessLow
+        ),
         label = "slider_return"
     )
 

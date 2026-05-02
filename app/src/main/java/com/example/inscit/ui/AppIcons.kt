@@ -452,3 +452,57 @@ fun MenuIcon(color: Color = Color.White, modifier: Modifier = Modifier.size(24.d
         drawLine(color, Offset(w * 0.2f, h * 0.7f), Offset(w * 0.8f, h * 0.7f), strokeWidth = 2.dp.toPx(), cap = StrokeCap.Round)
     }
 }
+
+@Composable
+fun EmailIcon(color: Color, modifier: Modifier = Modifier.size(24.dp)) {
+    Canvas(modifier = modifier) {
+        val w = size.width
+        val h = size.height
+        val rect = Path().apply {
+            moveTo(w * 0.1f, h * 0.25f)
+            lineTo(w * 0.9f, h * 0.25f)
+            lineTo(w * 0.9f, h * 0.75f)
+            lineTo(w * 0.1f, h * 0.75f)
+            close()
+        }
+        drawPath(rect, color, style = Stroke(width = 2.dp.toPx()))
+        val line = Path().apply {
+            moveTo(w * 0.1f, h * 0.25f)
+            lineTo(w * 0.5f, h * 0.55f)
+            lineTo(w * 0.9f, h * 0.25f)
+        }
+        drawPath(line, color, style = Stroke(width = 2.dp.toPx()))
+    }
+}
+
+@Composable
+fun PhoneIcon(color: Color, modifier: Modifier = Modifier.size(24.dp)) {
+    Canvas(modifier = modifier) {
+        val w = size.width
+        val h = size.height
+        val path = Path().apply {
+            moveTo(w * 0.3f, h * 0.15f)
+            lineTo(w * 0.7f, h * 0.15f)
+            quadraticTo(w * 0.8f, h * 0.15f, w * 0.8f, h * 0.25f)
+            lineTo(w * 0.8f, h * 0.75f)
+            quadraticTo(w * 0.8f, h * 0.85f, w * 0.7f, h * 0.85f)
+            lineTo(w * 0.3f, h * 0.85f)
+            quadraticTo(w * 0.2f, h * 0.85f, w * 0.2f, h * 0.75f)
+            lineTo(w * 0.2f, h * 0.25f)
+            quadraticTo(w * 0.2f, h * 0.15f, w * 0.3f, h * 0.15f)
+        }
+        drawPath(path, color, style = Stroke(width = 2.dp.toPx()))
+        drawCircle(color, radius = 4f, center = Offset(w * 0.5f, h * 0.75f))
+        drawLine(color, Offset(w * 0.4f, h * 0.2f), Offset(w * 0.6f, h * 0.2f), strokeWidth = 2f)
+    }
+}
+
+@Composable
+fun WebIcon(color: Color, modifier: Modifier = Modifier.size(24.dp)) {
+    Canvas(modifier = modifier) {
+        val center = Offset(size.width / 2, size.height / 2)
+        drawCircle(color, radius = size.width * 0.4f, center = center, style = Stroke(width = 2.dp.toPx()))
+        drawOval(color, topLeft = Offset(size.width * 0.3f, size.height * 0.1f), size = Size(size.width * 0.4f, size.height * 0.8f), style = Stroke(width = 2.dp.toPx()))
+        drawLine(color, Offset(size.width * 0.1f, center.y), Offset(size.width * 0.9f, center.y), strokeWidth = 2f)
+    }
+}
