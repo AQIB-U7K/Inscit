@@ -1,7 +1,7 @@
 package com.example.inscit.models
 
 enum class Lang { EN, HI }
-enum class ThemeMode { NEON, NOBLE }
+enum class ThemeMode { NEON, NOBLE, CUSTOM }
 
 data class UserSettings(
     val language: Lang = Lang.EN,

@@ -117,6 +117,7 @@ import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import com.example.inscit.models.Lang
 import com.example.inscit.models.QuizProgress
+import com.example.inscit.models.CustomTheme
 import com.example.inscit.models.ThemeMode
 import com.example.inscit.models.TopicDetail
 import com.example.inscit.models.UserDocument
@@ -128,6 +129,8 @@ import com.example.inscit.notifications.NotificationScheduler
 import com.example.inscit.syllabus.Syllabus
 import com.example.inscit.ui.AtomIcon
 import com.example.inscit.ui.BackIcon
+import com.example.inscit.ui.ColorPickerOverlay
+import com.example.inscit.ui.CustomThemeManager
 import com.example.inscit.ui.DNAIcon
 import com.example.inscit.ui.DrawingIcon
 import com.example.inscit.ui.EmailIcon
@@ -136,6 +139,7 @@ import com.example.inscit.ui.FlaskIcon
 import com.example.inscit.ui.LeaderboardScreen
 import com.example.inscit.ui.MenuIcon
 import com.example.inscit.ui.NoteIcon
+import com.example.inscit.ui.PencilIcon
 import com.example.inscit.ui.PhoneIcon
 import com.example.inscit.ui.ProfileImage
 import com.example.inscit.ui.SaveIcon
@@ -452,12 +456,19 @@ fun AppEngine(tts: TTSManager) {
     var selectedTopic by remember { mutableStateOf<TopicDetail?>(null) }
     var selectedExportFile by remember { mutableStateOf<File?>(null) }
 
+    val customThemes = remember { CustomThemeManager.loadThemes(context) }
+    var savedCustomThemes by remember { mutableStateOf(customThemes) }
+    var selectedCustomThemeName by remember { mutableStateOf(CustomThemeManager.getSelectedCustomThemeName(context)) }
+    var showColorPicker by remember { mutableStateOf(false) }
+
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
 
     // Derived state from userDocument
     val language = userDocument.settings.language
     val themeMode = userDocument.settings.theme
+
+    val activeCustomTheme = savedCustomThemes.find { it.name == selectedCustomThemeName }
 
     // Immediate persistence to SharedPreferences
     LaunchedEffect(userDocument) {
@@ -483,6 +494,16 @@ fun AppEngine(tts: TTSManager) {
                     tts.stop()
                     currentScreen = Screen.LAB
                 }
+                Screen.NOTES_FOLDER -> currentScreen = Screen.THEME_CONFIG
+                Screen.RANKINGS -> currentScreen = Screen.HOME
+                Screen.LAB -> {
+                    tts.stop()
+                    currentScreen = Screen.HOME
+                }
+                Screen.NOTES -> {
+                    tts.stop()
+                    currentScreen = Screen.LAB
+                }
                 Screen.QUIZ -> {
                     tts.stop()
                     currentScreen = Screen.HOME
@@ -497,16 +518,39 @@ fun AppEngine(tts: TTSManager) {
     }
 
     val appBg = when {
+        themeMode == ThemeMode.CUSTOM && activeCustomTheme != null -> activeCustomTheme.getBgColor()
         themeMode == ThemeMode.NOBLE && !isDark -> NobleLightBg
         themeMode == ThemeMode.NOBLE && isDark -> NobleDarkBg
         else -> DeepSpace
     }
-    val primaryAccent = if (themeMode == ThemeMode.NOBLE) {
-        if (isDark) NobleDarkAccent else NobleLightAccent
-    } else {
-        NeonCyan
+    val primaryAccent = when {
+        themeMode == ThemeMode.CUSTOM && activeCustomTheme != null -> activeCustomTheme.getAccentColor()
+        themeMode == ThemeMode.NOBLE -> if (isDark) NobleDarkAccent else NobleLightAccent
+        else -> NeonCyan
     }
-    val textColor = if (themeMode == ThemeMode.NOBLE && !isDark) Color(0xFF1A1A1A) else GhostWhite
+    val textColor = when {
+        themeMode == ThemeMode.CUSTOM && activeCustomTheme != null -> activeCustomTheme.getTxtColor()
+        themeMode == ThemeMode.NOBLE && !isDark -> Color(0xFF1A1A1A)
+        else -> GhostWhite
+    }
+
+    if (showColorPicker) {
+        ColorPickerOverlay(
+            lang = language,
+            initialAccent = primaryAccent,
+            initialBg = appBg,
+            onDismiss = { showColorPicker = false },
+            onApply = { newTheme ->
+                val updatedThemes = savedCustomThemes + newTheme
+                savedCustomThemes = updatedThemes
+                CustomThemeManager.saveThemes(context, updatedThemes)
+                selectedCustomThemeName = newTheme.name
+                CustomThemeManager.saveSelectedCustomThemeName(context, newTheme.name)
+                userDocument = userDocument.copy(settings = userDocument.settings.copy(theme = ThemeMode.CUSTOM))
+                showColorPicker = false
+            }
+        )
+    }
 
     MaterialTheme {
         ModalNavigationDrawer(
@@ -616,9 +660,26 @@ fun AppEngine(tts: TTSManager) {
                             lang = language,
                             accent = primaryAccent,
                             txtCol = textColor,
+                            customThemes = savedCustomThemes,
+                            selectedCustomName = selectedCustomThemeName,
                             onToggle = { newTheme ->
                                 userDocument = userDocument.copy(settings = userDocument.settings.copy(theme = newTheme))
                             },
+                            onToggleCustom = { name ->
+                                selectedCustomThemeName = name
+                                CustomThemeManager.saveSelectedCustomThemeName(context, name)
+                                userDocument = userDocument.copy(settings = userDocument.settings.copy(theme = ThemeMode.CUSTOM))
+                            },
+                            onDeleteCustom = { name ->
+                                CustomThemeManager.deleteTheme(context, name)
+                                val updatedThemes = savedCustomThemes.filter { it.name != name }
+                                savedCustomThemes = updatedThemes
+                                if (selectedCustomThemeName == name) {
+                                    selectedCustomThemeName = null
+                                    userDocument = userDocument.copy(settings = userDocument.settings.copy(theme = ThemeMode.NEON))
+                                }
+                            },
+                            onAddCustom = { showColorPicker = true },
                             onLangToggle = { newLang ->
                                 userDocument = userDocument.copy(settings = userDocument.settings.copy(language = newLang))
                             },
@@ -2162,14 +2223,19 @@ fun ThemeSelectionScreen(
     lang: Lang,
     accent: Color,
     txtCol: Color,
+    customThemes: List<CustomTheme> = emptyList(),
+    selectedCustomName: String? = null,
     onToggle: (ThemeMode) -> Unit,
+    onToggleCustom: (String) -> Unit = {},
+    onDeleteCustom: (String) -> Unit = {},
+    onAddCustom: () -> Unit = {},
     onLangToggle: (Lang) -> Unit,
     onOpenFolder: () -> Unit,
     onViewNote: (Branch) -> Unit,
     onBack: () -> Unit
 ) {
     Column(
-        modifier = Modifier.fillMaxSize().padding(24.dp),
+        modifier = Modifier.fillMaxSize().padding(24.dp).verticalScroll(rememberScrollState()),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
@@ -2185,12 +2251,31 @@ fun ThemeSelectionScreen(
 
         Spacer(Modifier.height(32.dp))
 
-        Text(if (lang == Lang.EN) "INTERFACE THEME" else "इंटरफ़ेस थीम", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = accent, letterSpacing = 2.sp, modifier = Modifier.align(Alignment.Start))
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
+            Text(if (lang == Lang.EN) "INTERFACE THEME" else "इंटरफ़ेस थीम", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = accent, letterSpacing = 2.sp)
+            IconButton(onClick = onAddCustom) { PencilIcon(color = accent, modifier = Modifier.size(20.dp)) }
+        }
         Spacer(Modifier.height(16.dp))
 
         ThemeItem(if (lang == Lang.EN) "NEON PROTOCOL" else "नियॉन प्रोटोकॉल", ThemeMode.NEON, current == ThemeMode.NEON, accent) { onToggle(ThemeMode.NEON) }
         Spacer(Modifier.height(12.dp))
         ThemeItem(if (lang == Lang.EN) "NOBLE ARCHIVE" else "नोबल आर्काइव", ThemeMode.NOBLE, current == ThemeMode.NOBLE, accent) { onToggle(ThemeMode.NOBLE) }
+
+        if (customThemes.isNotEmpty()) {
+            Spacer(Modifier.height(32.dp))
+            Text(if (lang == Lang.EN) "CREATED" else "बनाया गया", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = accent, letterSpacing = 2.sp, modifier = Modifier.align(Alignment.Start))
+            Spacer(Modifier.height(16.dp))
+            customThemes.forEach { theme ->
+                ThemeItem(
+                    label = theme.name.uppercase(),
+                    mode = ThemeMode.CUSTOM,
+                    isSelected = current == ThemeMode.CUSTOM && selectedCustomName == theme.name,
+                    accent = Color(theme.primaryAccent),
+                    onDelete = { onDeleteCustom(theme.name) }
+                ) { onToggleCustom(theme.name) }
+                Spacer(Modifier.height(12.dp))
+            }
+        }
 
         Spacer(Modifier.height(48.dp))
 
@@ -2218,7 +2303,7 @@ fun ThemeSelectionScreen(
         Text(if (lang == Lang.EN) "SAVED OBSERVATIONS" else "सेव की गई ऑब्जर्वेशन", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = accent, letterSpacing = 2.sp, modifier = Modifier.align(Alignment.Start))
         Spacer(Modifier.height(16.dp))
 
-        Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState())) {
+        Column(Modifier.fillMaxWidth()) {
             Branch.entries.forEach { branch ->
                 Surface(
                     modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
@@ -2242,7 +2327,7 @@ fun ThemeSelectionScreen(
             }
         }
 
-        Spacer(Modifier.weight(1f))
+        Spacer(Modifier.height(32.dp))
 
         Text(
             "INSCIT OMEGA v9.0.4",
@@ -2306,7 +2391,14 @@ fun LanguageSlider(current: Lang, accent: Color, onToggle: (Lang) -> Unit) {
 }
 
 @Composable
-fun ThemeItem(label: String, mode: ThemeMode, isSelected: Boolean, accent: Color, onClick: () -> Unit) {
+fun ThemeItem(
+    label: String,
+    mode: ThemeMode,
+    isSelected: Boolean,
+    accent: Color,
+    onDelete: (() -> Unit)? = null,
+    onClick: () -> Unit
+) {
     Surface(
         onClick = onClick,
         modifier = Modifier.fillMaxWidth().height(64.dp),
@@ -2317,7 +2409,15 @@ fun ThemeItem(label: String, mode: ThemeMode, isSelected: Boolean, accent: Color
         Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
             Text(label, color = if (isSelected) accent else GhostWhite, fontWeight = FontWeight.Bold)
             Spacer(Modifier.weight(1f))
-            if (isSelected) Text("ACTIVE", color = accent, fontSize = 10.sp, fontWeight = FontWeight.Black)
+            if (isSelected) {
+                Text("ACTIVE", color = accent, fontSize = 10.sp, fontWeight = FontWeight.Black)
+            }
+            if (onDelete != null) {
+                Spacer(Modifier.width(16.dp))
+                IconButton(onClick = onDelete, modifier = Modifier.size(24.dp)) {
+                    Text("×", color = PowerRed, fontSize = 24.sp, fontWeight = FontWeight.ExtraBold)
+                }
+            }
         }
     }
 }
