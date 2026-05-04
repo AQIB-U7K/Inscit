@@ -129,6 +129,7 @@ import com.example.inscit.notifications.NotificationScheduler
 import com.example.inscit.syllabus.Syllabus
 import com.example.inscit.ui.AtomIcon
 import com.example.inscit.ui.BackIcon
+import com.example.inscit.ui.CheckIcon
 import com.example.inscit.ui.ColorPickerOverlay
 import com.example.inscit.ui.CustomThemeManager
 import com.example.inscit.ui.DNAIcon
@@ -137,10 +138,12 @@ import com.example.inscit.ui.EmailIcon
 import com.example.inscit.ui.ExportIcon
 import com.example.inscit.ui.FlaskIcon
 import com.example.inscit.ui.LeaderboardScreen
+import com.example.inscit.ui.LockIcon
 import com.example.inscit.ui.MenuIcon
 import com.example.inscit.ui.NoteIcon
 import com.example.inscit.ui.PencilIcon
 import com.example.inscit.ui.PhoneIcon
+import com.example.inscit.ui.PlusIcon
 import com.example.inscit.ui.ProfileImage
 import com.example.inscit.ui.SaveIcon
 import com.example.inscit.ui.ScienceQuizScreen
@@ -148,6 +151,7 @@ import com.example.inscit.ui.ShareIcon
 import com.example.inscit.ui.StarIcon
 import com.example.inscit.ui.TopicDetailScreen
 import com.example.inscit.ui.TopicSelectionScreen
+import com.example.inscit.ui.TrophyIcon
 import com.example.inscit.ui.TtsController
 import com.example.inscit.ui.WebIcon
 import com.example.inscit.ui.theme.spacing
@@ -859,10 +863,11 @@ fun DrawerContent(
 
             DrawerItem(
                 label = if (lang == Lang.EN) {
-                    if (isChallengeDone) "DAILY CHALLENGE ✓" else "DAILY CHALLENGE"
+                    if (isChallengeDone) "DAILY CHALLENGE" else "DAILY CHALLENGE"
                 } else {
-                    if (isChallengeDone) "दैनिक चुनौती ✓" else "दैनिक चुनौती"
+                    if (isChallengeDone) "दैनिक चुनौती" else "दैनिक चुनौती"
                 },
+                trailingIcon = { if (isChallengeDone) CheckIcon(accent, Modifier.size(16.dp)) },
                 screen = Screen.DAILY_QUIZ,
                 currentScreen = currentScreen,
                 onNavigate = onNavigate,
@@ -940,7 +945,7 @@ fun AchievementsScreen(accent: Color, txtCol: Color, lang: Lang, xp: Int, onBack
                 border = BorderStroke(1.dp, if (isUnlocked) accent else GhostWhite.copy(alpha = 0.05f))
             ) {
                 Row(Modifier.padding(20.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Text(if (isUnlocked) "🏆" else "🔒", fontSize = 24.sp)
+                    if (isUnlocked) TrophyIcon(accent, Modifier.size(24.dp)) else LockIcon(GhostWhite.copy(alpha = 0.3f), Modifier.size(24.dp))
                     Spacer(Modifier.width(16.dp))
                     Column {
                         Text(name, fontWeight = FontWeight.Bold, color = if (isUnlocked) GhostWhite else GhostWhite.copy(alpha = 0.3f))
@@ -993,7 +998,7 @@ fun DailyQuizScreen(
         if (status.isCompletedToday && status.lastCompletionDate == today) {
             Box(Modifier.fillMaxWidth().height(120.dp).background(accent.copy(alpha = 0.1f), RoundedCornerShape(24.dp)), contentAlignment = Alignment.Center) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("✓", fontSize = 48.sp, color = accent)
+                    CheckIcon(accent, Modifier.size(48.dp))
                     Text(if (lang == Lang.EN) "CHALLENGE COMPLETED" else "चुनौती पूरी हुई", fontWeight = FontWeight.Bold, color = accent)
                 }
             }
@@ -1081,7 +1086,7 @@ fun RoundCard(round: Int, qCount: Int, isUnlocked: Boolean, isCurrent: Boolean, 
         border = BorderStroke(1.dp, if (isCurrent) accent else if (isUnlocked) accent.copy(alpha = 0.3f) else GhostWhite.copy(alpha = 0.05f))
     ) {
         Row(Modifier.padding(20.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text(if (isUnlocked) "●" else "○", color = if (isUnlocked) accent else GhostWhite.copy(alpha = 0.3f))
+            if (isUnlocked) CheckIcon(accent, Modifier.size(16.dp)) else Box(Modifier.size(16.dp).border(1.dp, GhostWhite.copy(alpha = 0.3f), CircleShape))
             Spacer(Modifier.width(16.dp))
             Column {
                 Text("ROUND $round", fontWeight = FontWeight.Black, color = if (isUnlocked) GhostWhite else GhostWhite.copy(alpha = 0.3f))
@@ -1201,7 +1206,8 @@ fun DrawerItem(
     screen: Screen,
     currentScreen: Screen,
     onNavigate: (Screen) -> Unit,
-    accent: Color
+    accent: Color,
+    trailingIcon: (@Composable () -> Unit)? = null
 ) {
     val isSelected = currentScreen == screen
     NavigationDrawerItem(
@@ -1214,8 +1220,7 @@ fun DrawerItem(
             unselectedTextColor = GhostWhite.copy(alpha = 0.7f),
             selectedTextColor = accent
         ),
-        shape = RoundedCornerShape(12.dp),
-        modifier = Modifier.padding(vertical = 4.dp)
+
     )
 }
 
@@ -1814,7 +1819,7 @@ fun LocalProfileView(
                 modifier = Modifier.align(Alignment.BottomEnd).size(36.dp).clip(CircleShape).background(accent).padding(8.dp),
                 contentAlignment = Alignment.Center
             ) {
-                Text("+", color = DeepSpace, fontWeight = FontWeight.Black, fontSize = 20.sp)
+                PlusIcon(DeepSpace, Modifier.size(20.dp))
             }
         }
 

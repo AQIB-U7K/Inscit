@@ -342,32 +342,3 @@ fun ThemeTextField(value: String, onValueChange: (String) -> Unit, label: String
         )
     }
 }
-
-@Composable
-fun PencilIcon(color: Color = Color.White, modifier: Modifier = Modifier.size(24.dp)) {
-    Canvas(modifier = modifier) {
-        val w = size.width
-        val h = size.height
-        // Simple pencil drawing
-        drawRoundRect(
-            color = color,
-            topLeft = androidx.compose.ui.geometry.Offset(w * 0.2f, h * 0.2f),
-            size = androidx.compose.ui.geometry.Size(w * 0.6f, h * 0.1f),
-            cornerRadius = androidx.compose.ui.geometry.CornerRadius(2.dp.toPx(), 2.dp.toPx())
-        )
-        // Body
-        drawRect(
-            color = color,
-            topLeft = androidx.compose.ui.geometry.Offset(w * 0.2f, h * 0.35f),
-            size = androidx.compose.ui.geometry.Size(w * 0.6f, h * 0.4f)
-        )
-        // Tip
-        val path = androidx.compose.ui.graphics.Path().apply {
-            moveTo(w * 0.2f, h * 0.75f)
-            lineTo(w * 0.8f, h * 0.75f)
-            lineTo(w * 0.5f, h * 0.95f)
-            close()
-        }
-        drawPath(path, color)
-    }
-}

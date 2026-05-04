@@ -506,3 +506,117 @@ fun WebIcon(color: Color, modifier: Modifier = Modifier.size(24.dp)) {
         drawLine(color, Offset(size.width * 0.1f, center.y), Offset(size.width * 0.9f, center.y), strokeWidth = 2f)
     }
 }
+
+@Composable
+fun TrophyIcon(color: Color, modifier: Modifier = Modifier.size(24.dp)) {
+    Canvas(modifier = modifier) {
+        val w = size.width
+        val h = size.height
+        val path = Path().apply {
+            moveTo(w * 0.3f, h * 0.2f)
+            lineTo(w * 0.7f, h * 0.2f)
+            lineTo(w * 0.7f, h * 0.5f)
+            quadraticTo(w * 0.7f, h * 0.7f, w * 0.5f, h * 0.7f)
+            quadraticTo(w * 0.3f, h * 0.7f, w * 0.3f, h * 0.5f)
+            close()
+        }
+        drawPath(path, color)
+        drawLine(color, Offset(w * 0.5f, h * 0.7f), Offset(w * 0.5f, h * 0.85f), strokeWidth = 4f)
+        drawLine(color, Offset(w * 0.35f, h * 0.85f), Offset(w * 0.65f, h * 0.85f), strokeWidth = 4f)
+        
+        // Handles
+        drawPath(Path().apply {
+            moveTo(w * 0.3f, h * 0.3f)
+            quadraticTo(w * 0.15f, h * 0.3f, w * 0.15f, h * 0.45f)
+            quadraticTo(w * 0.15f, h * 0.6f, w * 0.3f, h * 0.55f)
+        }, color, style = Stroke(width = 2.dp.toPx()))
+        drawPath(Path().apply {
+            moveTo(w * 0.7f, h * 0.3f)
+            quadraticTo(w * 0.85f, h * 0.3f, w * 0.85f, h * 0.45f)
+            quadraticTo(w * 0.85f, h * 0.6f, w * 0.7f, h * 0.55f)
+        }, color, style = Stroke(width = 2.dp.toPx()))
+    }
+}
+
+@Composable
+fun LockIcon(color: Color, modifier: Modifier = Modifier.size(24.dp)) {
+    Canvas(modifier = modifier) {
+        val w = size.width
+        val h = size.height
+        drawRoundRect(color, topLeft = Offset(w * 0.25f, h * 0.45f), size = Size(w * 0.5f, h * 0.4f), cornerRadius = CornerRadius(4f, 4f))
+        drawPath(Path().apply {
+            moveTo(w * 0.35f, h * 0.45f)
+            lineTo(w * 0.35f, h * 0.3f)
+            quadraticTo(w * 0.35f, h * 0.15f, w * 0.5f, h * 0.15f)
+            quadraticTo(w * 0.65f, h * 0.15f, w * 0.65f, h * 0.3f)
+            lineTo(w * 0.65f, h * 0.45f)
+        }, color, style = Stroke(width = 2.dp.toPx()))
+    }
+}
+
+@Composable
+fun CheckIcon(color: Color, modifier: Modifier = Modifier.size(24.dp)) {
+    Canvas(modifier = modifier) {
+        val w = size.width
+        val h = size.height
+        val path = Path().apply {
+            moveTo(w * 0.2f, h * 0.5f)
+            lineTo(w * 0.45f, h * 0.75f)
+            lineTo(w * 0.8f, h * 0.25f)
+        }
+        drawPath(path, color, style = Stroke(width = 3.dp.toPx(), cap = StrokeCap.Round, join = androidx.compose.ui.graphics.StrokeJoin.Round))
+    }
+}
+
+@Composable
+fun HeartIcon(color: Color, modifier: Modifier = Modifier.size(24.dp)) {
+    Canvas(modifier = modifier) {
+        val w = size.width
+        val h = size.height
+        val path = Path().apply {
+            moveTo(w * 0.5f, h * 0.8f)
+            cubicTo(w * 0.1f, h * 0.5f, w * 0.1f, h * 0.1f, w * 0.5f, h * 0.3f)
+            cubicTo(w * 0.9f, h * 0.1f, w * 0.9f, h * 0.5f, w * 0.5f, h * 0.8f)
+        }
+        drawPath(path, color)
+    }
+}
+
+@Composable
+fun PlusIcon(color: Color, modifier: Modifier = Modifier.size(24.dp)) {
+    Canvas(modifier = modifier) {
+        val w = size.width
+        val h = size.height
+        drawLine(color, Offset(w * 0.5f, h * 0.25f), Offset(w * 0.5f, h * 0.75f), strokeWidth = 3.dp.toPx(), cap = StrokeCap.Round)
+        drawLine(color, Offset(w * 0.25f, h * 0.5f), Offset(w * 0.75f, h * 0.5f), strokeWidth = 3.dp.toPx(), cap = StrokeCap.Round)
+    }
+}
+
+@Composable
+fun PencilIcon(color: Color = Color.White, modifier: Modifier = Modifier.size(24.dp)) {
+    Canvas(modifier = modifier) {
+        val w = size.width
+        val h = size.height
+        // Simple pencil drawing
+        drawRoundRect(
+            color = color,
+            topLeft = Offset(w * 0.2f, h * 0.2f),
+            size = Size(w * 0.6f, h * 0.1f),
+            cornerRadius = CornerRadius(2.dp.toPx(), 2.dp.toPx())
+        )
+        // Body
+        drawRect(
+            color = color,
+            topLeft = Offset(w * 0.2f, h * 0.35f),
+            size = Size(w * 0.6f, h * 0.4f)
+        )
+        // Tip
+        val path = Path().apply {
+            moveTo(w * 0.2f, h * 0.75f)
+            lineTo(w * 0.8f, h * 0.75f)
+            lineTo(w * 0.5f, h * 0.95f)
+            close()
+        }
+        drawPath(path, color)
+    }
+}
